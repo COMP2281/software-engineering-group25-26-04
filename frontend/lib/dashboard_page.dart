@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'logs_page.dart';
 import 'log_modal.dart';
+import 'analytics_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -141,7 +142,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
-                        onPressed: () {},
+                        onPressed: () {Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AnalyticsPage()),
+    );},
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           side: BorderSide(color: Colors.blueGrey[200]!),
