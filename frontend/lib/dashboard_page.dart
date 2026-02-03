@@ -142,10 +142,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
-                        onPressed: () {Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AnalyticsPage()),
-    );},
+                        onPressed: () {},
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           side: BorderSide(color: Colors.blueGrey[200]!),
@@ -241,7 +238,12 @@ class _DashboardPageState extends State<DashboardPage> {
                              children: [
                                Text("Analytics", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.blueGrey[800])),
                                TextButton(
-                                 onPressed: () {}, 
+                                 onPressed: () {
+                                  Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AnalyticsPage()),
+    );
+                                 }, 
                                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), backgroundColor: Colors.blue[50], shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), 
                                  child: Text("View All", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue[700]))
                                )
