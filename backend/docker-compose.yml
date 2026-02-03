@@ -1,0 +1,66 @@
+# =============================================================================
+# DOCKER COMPOSE - Full Stack
+# =============================================================================
+# Runs the backend + database + nginx together.
+#
+# Start:   docker-compose up -d
+# Stop:    docker-compose down
+# Logs:    docker-compose logs -f
+# Rebuild: docker-compose up -d --build
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # DATABASE - PostgreSQL
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:15
+    container_name: my-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # BACKEND - FastAPI
+  # ---------------------------------------------------------------------------
+  api:
+    build: .
+    container_name: my-api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/mydb
+      DEBUG: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  # ---------------------------------------------------------------------------
+  # NGINX - Reverse Proxy (Optional)
+  # ---------------------------------------------------------------------------
+  # Uncomment this section when you want to add nginx
+  #
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: my-nginx
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - api
+
+volumes:
+  postgres_data:
