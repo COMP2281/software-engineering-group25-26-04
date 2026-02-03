@@ -71,7 +71,7 @@ uvicorn app.main:app --reload
 The API will be available at:
 - **API**: http://localhost:8000
 - **Interactive API Docs**: http://localhost:8000/docs
-- **Alternative Docs**: http://localhost:8000/redoc
+- **Alternative Docs**: http://localhost:8000/redoc <!-- cSpell:ignore redoc -->
 
 ### Daily Development
 

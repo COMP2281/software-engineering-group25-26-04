@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:developer';
 import 'logs_page.dart';
 import 'log_modal.dart';
 import 'analytics_page.dart';
@@ -13,17 +16,115 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  // Data for your classes
-  final List<Map<String, dynamic>> _classes = [
-    {"name": "Biology 101", "students": 24, "color": Colors.green},
-    {"name": "Chemistry", "students": 18, "color": Colors.orange},
-    {"name": "Physics A", "students": 22, "color": Colors.purple},
-    {"name": "Maths Adv", "students": 30, "color": Colors.blue},
-    {"name": "English Lit", "students": 25, "color": Colors.red},
-    {"name": "History", "students": 19, "color": Colors.brown},
-    {"name": "Comp Sci", "students": 28, "color": Colors.indigo},
-    {"name": "Art & Design", "students": 15, "color": Colors.pink},
+  late Future<List<Map<String, dynamic>>> _classesData;
+  late Future<List<Map<String, dynamic>>> _incidentsData;
+
+  final List<Color> _colors = [
+    Colors.green,
+    Colors.orange,
+    Colors.purple,
+    Colors.blue,
+    Colors.red,
+    Colors.brown,
+    Colors.indigo,
+    Colors.pink,
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _classesData = _fetchClasses();
+    _incidentsData = _fetchIncidents();
+  }
+
+  void _refreshData() {
+    setState(() {
+      _classesData = _fetchClasses();
+      _incidentsData = _fetchIncidents();
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchClasses() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/api/classes'),
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> jsonData = jsonDecode(response.body);
+        List<Map<String, dynamic>> classes = [];
+
+        for (int index = 0; index < jsonData.length; index++) {
+          final item = jsonData[index];
+          
+          // Fetch student count for this class
+          int studentCount = 0;
+          try {
+            final studentsResponse = await http.get(
+              Uri.parse('http://localhost:8000/api/class-students/class/${item['class_id']}'),
+            );
+            
+            if (studentsResponse.statusCode == 200) {
+              List<dynamic> studentsData = jsonDecode(studentsResponse.body);
+              studentCount = studentsData.length;
+            }
+          } catch (e) {
+            log('Error fetching student count for class ${item['class_id']}: $e');
+          }
+
+          classes.add({
+            'class_id': item['class_id'],
+            'name': item['class_name'],
+            'students': studentCount,
+            'color': _colors[index % _colors.length],
+          });
+        }
+        
+        return classes;
+      } else {
+        throw Exception('Failed to load classes');
+      }
+    } catch (e) {
+      log('Error fetching classes: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchIncidents() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/api/incidents'),
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> jsonData = jsonDecode(response.body);
+        List<Map<String, dynamic>> incidents = jsonData.map((item) {
+          // Parse the date string
+          String dateStr = item['incident_date'] ?? '';
+          String formattedDate = dateStr.isNotEmpty 
+              ? DateTime.parse(dateStr).toString().split(' ')[0]
+              : 'Unknown';
+
+          return {
+            'incident_id': item['incident_id'],
+            'title': item['other_activity'] ?? 'Incident',
+            'date': formattedDate,
+            'coordinator': 'Staff',
+            'action_taken': item['action_taken'] ?? 'Pending',
+            'outcome': item['outcome'],
+          };
+        }).toList();
+        
+        // Return only the most recent 5 incidents
+        return incidents.take(5).toList();
+      } else {
+        throw Exception('Failed to load incidents');
+      }
+    } catch (e) {
+      log('Error fetching incidents: $e');
+      return [];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +182,12 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                           ],
                         ),
-                        // Removed the IconButton here
+                        IconButton(
+                          onPressed: _refreshData,
+                          icon: const Icon(Icons.refresh),
+                          color: Colors.blueGrey[600],
+                          tooltip: 'Refresh data',
+                        ),
                       ],
                     ),
                     
@@ -89,50 +195,64 @@ class _DashboardPageState extends State<DashboardPage> {
 
                     // GRID OF CLASSES
                     Expanded(
-                      child: GridView.builder(
-                        itemCount: _classes.length,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2, 
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 1.6, 
-                        ),
-                        itemBuilder: (context, index) {
-                          final cls = _classes[index];
-                          return InkWell(
-                            onTap: () {},
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: (cls['color'] as Color).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: (cls['color'] as Color).withOpacity(0.3),
-                                  width: 1
-                                )
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.class_, color: cls['color'], size: 32),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    cls['name'],
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Colors.blueGrey[800]
-                                    ),
-                                  ),
-                                  Text(
-                                    "${cls['students']} Students",
-                                    style: TextStyle(
-                                      color: Colors.blueGrey[500],
-                                      fontSize: 12
-                                    ),
-                                  )
-                                ],
-                              ),
+                      child: FutureBuilder<List<Map<String, dynamic>>>(
+                        future: _classesData,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          } else if (snapshot.hasError) {
+                            return Center(child: Text('Error loading classes: ${snapshot.error}'));
+                          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return const Center(child: Text('No classes found'));
+                          }
+
+                          final classes = snapshot.data!;
+                          return GridView.builder(
+                            itemCount: classes.length,
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              childAspectRatio: 1.6,
                             ),
+                            itemBuilder: (context, index) {
+                              final cls = classes[index];
+                              return InkWell(
+                                onTap: () {},
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: (cls['color'] as Color).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: (cls['color'] as Color).withOpacity(0.3),
+                                      width: 1
+                                    )
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.class_, color: cls['color'], size: 32),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        cls['name'],
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: Colors.blueGrey[800]
+                                        ),
+                                      ),
+                                      Text(
+                                        "${cls['students']} Students",
+                                        style: TextStyle(
+                                          color: Colors.blueGrey[500],
+                                          fontSize: 12
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
                       ),
@@ -178,18 +298,50 @@ class _DashboardPageState extends State<DashboardPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Logs", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.blueGrey[800])),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("Incidents", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.blueGrey[800])),
+                              IconButton(
+                                onPressed: _refreshData,
+                                icon: const Icon(Icons.refresh),
+                                color: Colors.blueGrey[600],
+                                tooltip: 'Refresh incidents',
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 16),
                           Expanded(
-                            child: ListView(
-                                    physics: const AlwaysScrollableScrollPhysics(),
-                                    children: [
-                                      _buildLogItem("System Update", "24 Jan", "Admin", "Completed", Colors.green),
-                                      _buildLogItem("User Request", "23 Jan", "Sarah", "Awaiting Action", Colors.orange),
-                                      _buildLogItem("Backup Failed", "22 Jan", "System", "Incomplete", Colors.red),
-                                      _buildLogItem("New Registration", "21 Jan", "Mike", "Completed", Colors.green),
-                                      _buildLogItem("Security Check", "20 Jan", "Admin", "Completed", Colors.green),
-                                    ],
+                            child: FutureBuilder<List<Map<String, dynamic>>>(
+                              future: _incidentsData,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const Center(child: CircularProgressIndicator());
+                                } else if (snapshot.hasError) {
+                                  return Center(child: Text('Error loading incidents: ${snapshot.error}'));
+                                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                  return const Center(child: Text('No incidents found'));
+                                }
+
+                                final incidents = snapshot.data!;
+                                return ListView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  children: incidents.map((incident) {
+                                    final statusColor = incident['outcome'] == 'Resolved' 
+                                        ? Colors.green 
+                                        : incident['outcome'] == 'Pending' 
+                                        ? Colors.orange 
+                                        : Colors.red;
+                                    return _buildLogItem(
+                                      incident['title'],
+                                      incident['date'],
+                                      incident['coordinator'],
+                                      incident['outcome'] ?? 'Pending',
+                                      statusColor,
+                                    );
+                                  }).toList(),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(height: 16),
