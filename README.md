@@ -1,200 +1,245 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/B06_mcpV)
+# Software Engineering Project
+
+Full-stack application with Flutter frontend and FastAPI backend.
 
 ## Prerequisites
 
-Install the following:
-- Flutter VSCode extension (or equivalent for your IDE)
-- Python 3.14 or later
-- Language Support for Java(TM) by Red Hat VSCode extension
-- **PostgreSQL** (see Database Setup below)
+- **Python 3.8+**
+- **Flutter SDK** ([Install instructions](https://docs.flutter.dev/get-started/install))
+- **Git**
+- **IDE**: VS Code with Flutter and Python extensions (recommended)
 
-## Database Setup (PostgreSQL)
+---
 
-### 1. Install PostgreSQL
+## 🚀 Quick Start
 
-**Windows:**
-1. Download from https://www.postgresql.org/download/windows/
-2. Run the installer (remember your password for the 'postgres' user!)
-3. Use default port 5432
-4. pgAdmin will be installed automatically (GUI for managing the database)
+### 1️⃣ Clone the Repository
 
-**macOS:**
 ```bash
-brew install postgresql
-brew services start postgresql
+git clone <repository-url>
+cd software-engineering-group25-26-04
 ```
 
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-sudo systemctl start postgresql
-```
+---
 
-### 2. Create the Database
-
-**Using pgAdmin (Windows - Recommended):**
-1. Open pgAdmin 4 (search in Start menu)
-2. Connect to your local PostgreSQL server
-3. Right-click "Databases" → "Create" → "Database"
-4. Name it `myapp_db` (or whatever you set in .env)
-5. Click "Save"
-
-**Using Command Line:**
-```bash
-# Windows (open Command Prompt as Admin):
-psql -U postgres
-CREATE DATABASE myapp_db;
-\q
-
-# Mac/Linux:
-sudo -u postgres psql
-CREATE DATABASE myapp_db;
-\q
-```
-
-### 3. Configure Environment Variables
-
-1. Navigate to the `backend` folder
-2. Copy `.env.example` to `.env`
-3. Edit `.env` with your PostgreSQL credentials:
-   ```
-   DB_USER=postgres
-   DB_PASSWORD=your_postgres_password
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_NAME=myapp_db
-   ```
-
-## Backend Setup
+## 🔧 Backend Setup (FastAPI)
 
 ### First Time Setup
 
-**Windows (PowerShell):**
-```powershell
-cd backend
-.\setup.ps1
-```
+1. **Navigate to backend folder:**
+   ```bash
+   cd backend
+   ```
 
-**macOS/Linux:**
+2. **Create virtual environment:**
+   ```bash
+   python -m venv venv
+   ```
+
+3. **Activate virtual environment:**
+   
+   **Windows:**
+   ```bash
+   venv\Scripts\activate
+   ```
+   
+   **Mac/Linux:**
+   ```bash
+   source venv/bin/activate
+   ```
+
+4. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. **Set up environment variables:**
+   
+   The `.env` file is already configured for local development with SQLite. No additional setup needed!
+
+6. **Run database migrations:**
+   ```bash
+   alembic upgrade head
+   ```
+
+### Running the Backend
+
 ```bash
-cd backend
-chmod +x setup.sh
-./setup.sh
-```
-
-This will create a virtual environment and install all dependencies.
-
-### Initialize the Database Tables
-
-After setting up the backend, run:
-```powershell
-cd backend
-.\venv\Scripts\Activate.ps1
-python init_db.py
-```
-
-This creates all the database tables defined in your models.
-
-### Run the API Server
-
-**Option 1 - Using the helper script:**
-```powershell
-cd backend
-.\run.ps1
-```
-
-**Option 2 - Manual:**
-```powershell
-cd backend
-.\venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload
 ```
 
 The API will be available at:
 - **API**: http://localhost:8000
-- **Interactive Docs**: http://localhost:8000/docs (try out endpoints here!)
+- **Interactive API Docs**: http://localhost:8000/docs
 - **Alternative Docs**: http://localhost:8000/redoc
 
 ### Daily Development
 
-**Windows (PowerShell):**
-```powershell
-cd backend
-.\venv\Scripts\Activate.ps1
-```
-
-**macOS/Linux:**
+**Activate virtual environment** before working:
 ```bash
-cd backend
+# Windows
+venv\Scripts\activate
+
+# Mac/Linux
 source venv/bin/activate
 ```
 
-To deactivate the virtual environment when you're done:
+**Deactivate** when done:
 ```bash
 deactivate
 ```
 
-### Troubleshooting
+---
 
-- If you get a script execution error on Windows, run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
-- If packages are missing, run `pip install -r requirements.txt` after activating the virtual environment
-- Each team member should create their own virtual environment - do NOT commit the `venv/` folder to git
-- **Database connection errors**: Make sure PostgreSQL is running and your `.env` file is configured correctly
-- **Port already in use**: Another process is using port 8000. Either stop it or use a different port: `uvicorn app.main:app --reload --port 8001`
+## 📱 Frontend Setup (Flutter)
 
-## Project Structure
+### First Time Setup
+
+1. **Navigate to frontend folder:**
+   ```bash
+   cd frontend
+   ```
+
+2. **Install Flutter dependencies:**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Verify Flutter installation:**
+   ```bash
+   flutter doctor
+   ```
+   *(Fix any issues reported)*
+
+### Running the Frontend
+
+1. **List available devices:**
+   ```bash
+   flutter devices
+   ```
+
+2. **Run the app:**
+   
+   **On Chrome (Web):**
+   ```bash
+   flutter run -d chrome
+   ```
+   
+   **On Windows:**
+   ```bash
+   flutter run -d windows
+   ```
+   
+   **On Android Emulator:**
+   ```bash
+   flutter run -d <device-id>
+   ```
+
+3. **Hot reload:** Press `r` in the terminal to hot reload changes
+   
+4. **Hot restart:** Press `R` for full restart
+
+---
+
+## 📁 Project Structure
 
 ```
-backend/
-├── app/
-│   ├── __init__.py         # Package initializer
-│   ├── main.py             # FastAPI application entry point
-│   ├── config.py           # Configuration and settings
-│   ├── database.py         # Database connection setup
-│   ├── models.py           # Database models (tables) - EDIT THIS!
-│   ├── schemas.py          # Pydantic schemas (API data shapes)
-│   └── routes/
-│       ├── __init__.py     # Routes package
-│       ├── users.py        # User API endpoints (example)
-│       └── items.py        # Item API endpoints (example)
-├── .env.example            # Example environment variables
-├── .env                    # YOUR environment variables (don't commit!)
-├── requirements.txt        # Python dependencies
-├── init_db.py              # Database initialization script
-├── run.ps1                 # Helper script to run the server
-└── setup.ps1               # Setup script
+.
+├── backend/                  # FastAPI Backend
+│   ├── app/
+│   │   ├── main.py          # FastAPI app entry point
+│   │   ├── models.py        # Database models
+│   │   ├── schemas.py       # API request/response schemas
+│   │   ├── database.py      # Database configuration
+│   │   └── routes/          # API endpoints
+│   ├── alembic/             # Database migrations
+│   ├── requirements.txt     # Python dependencies
+│   ├── .env                 # Environment variables
+│   └── Dockerfile           # Docker configuration
+│
+├── frontend/                # Flutter Frontend
+│   ├── lib/
+│   │   ├── main.dart        # Flutter app entry point
+│   │   ├── dashboard_page.dart
+│   │   ├── logs_page.dart
+│   │   └── analytics_page.dart
+│   ├── pubspec.yaml         # Flutter dependencies
+│   └── android/, ios/, web/ # Platform-specific code
+│
+└── .gitignore               # Git ignore rules
 ```
 
-## Adding Your Own Database Tables
+---
 
-1. **Define the model** in `backend/app/models.py`:
-   ```python
-   class YourTable(Base):
-       __tablename__ = "your_table_name"
-       id: Mapped[int] = mapped_column(Integer, primary_key=True)
-       # Add your columns...
+## 🔨 Development Workflow
+
+### Backend Changes
+
+1. Activate virtual environment
+2. Make code changes
+3. If models changed: Create migration
+   ```bash
+   alembic revision --autogenerate -m "description"
+   alembic upgrade head
    ```
+4. Test API at http://localhost:8000/docs
 
-2. **Create schemas** in `backend/app/schemas.py`:
-   ```python
-   class YourTableCreate(BaseModel):
-       # Fields for creating records
-   
-   class YourTableResponse(BaseModel):
-       # Fields returned in API responses
-   ```
+### Frontend Changes
 
-3. **Create routes** in `backend/app/routes/your_routes.py`:
-   ```python
-   router = APIRouter(prefix="/api/your-endpoint", tags=["YourTag"])
-   
-   @router.get("/")
-   async def get_all(...):
-       # Your logic
-   ```
+1. Make code changes in `lib/`
+2. Press `r` to hot reload
+3. Test on multiple devices if needed
 
-4. **Register the router** in `backend/app/routes/__init__.py`
+---
 
-5. **Run** `python init_db.py` to create the new tables
+## 🐛 Troubleshooting
+
+### Backend Issues
+
+- **Port already in use:**
+  ```bash
+  uvicorn app.main:app --reload --port 8001
+  ```
+
+- **Missing packages:**
+  ```bash
+  pip install -r requirements.txt
+  ```
+
+- **Database errors:**
+  ```bash
+  alembic downgrade -1
+  alembic upgrade head
+  ```
+
+### Frontend Issues
+
+- **Dependencies not installing:**
+  ```bash
+  flutter pub upgrade
+  flutter clean
+  flutter pub get
+  ```
+
+- **Build errors:**
+  ```bash
+  flutter clean
+  flutter pub get
+  flutter run
+  ```
+
+- **Device not detected:**
+  ```bash
+  flutter devices
+  # Follow flutter doctor recommendations
+  ```
+
+---
+
+## 📝 Important Notes
+
+- **Never commit** `.env` files or `venv/` folders
+- **Database file** (`app.db`) is git-ignored
+- **Virtual environment** should be created locally by each developer
+- **Flutter packages** will be downloaded via `flutter pub get`
 
