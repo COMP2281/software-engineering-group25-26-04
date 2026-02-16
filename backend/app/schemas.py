@@ -64,6 +64,17 @@ class UserResponse(BaseModel):
     staff_id: int
     model_config = ConfigDict(from_attributes=True)
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class LoginResponse(BaseModel):
+    staff_id: int
+    first_name: str
+    last_name: str
+    role: str
+    message: str
+
 
 # =============================================================================
 # STUDENT SCHEMAS
@@ -71,6 +82,7 @@ class UserResponse(BaseModel):
 class StudentCreate(BaseModel):
     first_name: str
     last_name: str
+    site: Optional[str] = None
     date_of_birth: Optional[Date] = None
     year_group: Optional[int] = None
     has_disability: bool = False
@@ -79,6 +91,7 @@ class StudentCreate(BaseModel):
 class StudentUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    site: Optional[str] = None
     date_of_birth: Optional[Date] = None
     year_group: Optional[int] = None
     has_disability: Optional[bool] = None
@@ -88,6 +101,7 @@ class StudentResponse(BaseModel):
     student_id: int
     first_name: str
     last_name: str
+    site: Optional[str]
     date_of_birth: Optional[Date]
     year_group: Optional[int]
     has_disability: bool

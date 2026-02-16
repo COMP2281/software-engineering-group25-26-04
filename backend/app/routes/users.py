@@ -16,8 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import User
-from app.schemas import UserCreate, UserUpdate, UserResponse, Message
+from app.models import User, Staff
+from app.schemas import UserCreate, UserUpdate, UserResponse, LoginRequest, LoginResponse, Message
 
 
 # Create router with prefix and tag
@@ -98,6 +98,38 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     await db.delete(user)
     await db.commit()
     return Message(message="User deleted")
+
+
+# -----------------------------------------------------------------------------
+# LOGIN
+# -----------------------------------------------------------------------------
+@router.post("/login", response_model=LoginResponse)
+async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+    """Login with email and password"""
+    try:
+        # Find staff by email
+        result = await db.execute(select(Staff).where(Staff.email == data.email))
+        staff = result.scalar_one_or_none()
+        
+        if not staff:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # Check password (plain text for now, but should hash in production)
+        user_result = await db.execute(select(User).where(User.staff_id == staff.staff_id))
+        user = user_result.scalar_one_or_none()
+        
+        if not user or user.password != data.password:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        return LoginResponse(
+            staff_id=staff.staff_id,
+            first_name=staff.first_name,
+            last_name=staff.last_name,
+            role=staff.role,
+            message="Login successful"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =============================================================================

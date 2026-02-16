@@ -73,6 +73,7 @@ class Student(Base):
     student_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))
+    site: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     date_of_birth: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     year_group: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     has_disability: Mapped[bool] = mapped_column(Boolean, default=False)
