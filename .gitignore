@@ -27,7 +27,6 @@ pipenv/
 *.egg
 dist/
 build/
-lib/
 lib64/
 parts/
 sdist/
