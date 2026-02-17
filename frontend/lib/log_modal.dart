@@ -14,11 +14,12 @@ class _CreateLogModalState extends State<CreateLogModal> {
   final TextEditingController _staffInputController = TextEditingController();
   final TextEditingController _authorController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _activityController = TextEditingController();
+  final TextEditingController _sheetController = TextEditingController();
   
   bool _isAuthorSameAsStaff = false;
   DateTime _selectedDate = DateTime.now();
   
-  // Site Selection State
   String? _selectedSite;
   final List<String> _sites = ["Site 1", "Site 2", "Site 3"];
 
@@ -56,6 +57,8 @@ class _CreateLogModalState extends State<CreateLogModal> {
     _staffInputController.dispose();
     _authorController.dispose();
     _dateController.dispose();
+    _activityController.dispose();
+    _sheetController.dispose();
     super.dispose();
   }
 
@@ -97,7 +100,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
         duration: const Duration(milliseconds: 100),
         padding: EdgeInsets.only(bottom: bottomInset),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800, maxHeight: 900),
+          constraints: const BoxConstraints(maxWidth: 850, maxHeight: 950),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -143,9 +146,9 @@ class _CreateLogModalState extends State<CreateLogModal> {
   Widget _buildTopFields() {
     return Column(
       children: [
+        // Row 1: Coordinator, Site, Date
         Row(
           children: [
-            // Coordinator Field
             Expanded(
               flex: 2,
               child: TextFormField(
@@ -157,23 +160,20 @@ class _CreateLogModalState extends State<CreateLogModal> {
                 ),
               ),
             ),
-            const SizedBox(width: 15),
-            // Site Dropdown
+            const SizedBox(width: 12),
             Expanded(
               flex: 1,
               child: DropdownButtonFormField<String>(
                 value: _selectedSite,
                 decoration: const InputDecoration(
-                  labelText: "Select Site",
+                  labelText: "Site",
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
                 items: _sites.map((site) => DropdownMenuItem(value: site, child: Text(site))).toList(),
                 onChanged: (val) => setState(() => _selectedSite = val),
               ),
             ),
-            const SizedBox(width: 15),
-            // Date Picker
+            const SizedBox(width: 12),
             Expanded(
               flex: 1,
               child: TextFormField(
@@ -181,8 +181,36 @@ class _CreateLogModalState extends State<CreateLogModal> {
                 readOnly: true,
                 onTap: () => _selectDate(context),
                 decoration: const InputDecoration(
-                  labelText: "Log Date",
+                  labelText: "Date",
                   suffixIcon: Icon(Icons.calendar_today),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Row 2: Activity/Lesson and Sheet No.
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextFormField(
+                controller: _activityController,
+                decoration: const InputDecoration(
+                  labelText: "Activity / Lesson",
+                  prefixIcon: Icon(Icons.school),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 1,
+              child: TextFormField(
+                controller: _sheetController,
+                decoration: const InputDecoration(
+                  labelText: "Sheet No.",
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -200,7 +228,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
         const Text("Staff Involved", style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey.shade400),
             borderRadius: BorderRadius.circular(8),
@@ -214,11 +242,11 @@ class _CreateLogModalState extends State<CreateLogModal> {
                 onDeleted: () => setState(() => _staffInvolved.remove(staff)),
               )),
               SizedBox(
-                width: 200,
+                width: 180,
                 child: TextField(
                   controller: _staffInputController,
                   decoration: const InputDecoration(
-                    hintText: "Add staff name...",
+                    hintText: "Add staff...",
                     border: InputBorder.none,
                     isDense: true,
                   ),
@@ -240,7 +268,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select Incidents (Multi-select):", style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text("Incident Types (Multi-select):", style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -341,7 +369,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
             ),
             const SizedBox(width: 10),
             FilterChip(
-              label: const Text("Use Lead Staff Name"),
+              label: const Text("Use Lead Staff"),
               selected: _isAuthorSameAsStaff,
               onSelected: (val) {
                 setState(() {
