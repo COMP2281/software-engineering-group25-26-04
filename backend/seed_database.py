@@ -229,15 +229,19 @@ async def seed_database():
             class_students = result.scalars().all()
 
             for cs in class_students:
-                # Randomly mark students as present/absent
+                # Randomly mark students as present/absent by session
                 import random
-                present = random.choices([True, False], weights=[0.9, 0.1])[0]
-                note = "Sick leave" if not present else None
+                am_present = random.choices([True, False], weights=[0.9, 0.1])[0]
+                pm_present = random.choices([True, False], weights=[0.9, 0.1])[0]
+                on_site = am_present or pm_present
+                note = "Sick leave" if not am_present and not pm_present else None
                 
                 attendance = Attendance(
                     register_id=register.register_id,
                     student_id=cs.student_id,
-                    present=present,
+                    am_present=am_present,
+                    pm_present=pm_present,
+                    on_site=on_site,
                     note=note
                 )
                 session.add(attendance)
