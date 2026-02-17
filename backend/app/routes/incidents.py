@@ -5,6 +5,7 @@
 #
 # ENDPOINTS:
 # - GET    /api/incidents           - Get all incidents
+# - GET    /api/incidents/site/{id} - Get incidents by site
 # - GET    /api/incidents/{id}      - Get one incident
 # - POST   /api/incidents           - Create incident
 # - PUT    /api/incidents/{id}      - Update incident
@@ -13,10 +14,10 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, join
 
 from app.database import get_db
-from app.models import Incident
+from app.models import Incident, Class
 from app.schemas import IncidentCreate, IncidentUpdate, IncidentResponse, Message
 
 
@@ -24,9 +25,7 @@ from app.schemas import IncidentCreate, IncidentUpdate, IncidentResponse, Messag
 router = APIRouter(prefix="/api/incidents", tags=["Incidents"])
 
 
-# -----------------------------------------------------------------------------
-# GET ALL
-# -----------------------------------------------------------------------------
+# GET ALL - must be before GET ONE to match correctly
 @router.get("/", response_model=list[IncidentResponse])
 async def get_incidents(db: AsyncSession = Depends(get_db)):
     """Get all incidents"""
@@ -34,9 +33,19 @@ async def get_incidents(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-# -----------------------------------------------------------------------------
-# GET ONE
-# -----------------------------------------------------------------------------
+# GET INCIDENTS BY SITE - must be before GET ONE
+@router.get("/site/{site_combination_id}", response_model=list[IncidentResponse])
+async def get_incidents_by_site(site_combination_id: int, db: AsyncSession = Depends(get_db)):
+    """Get all incidents for a specific site"""
+    result = await db.execute(
+        select(Incident)
+        .join(Class, Incident.class_id == Class.class_id, isouter=True)
+        .where(Class.site_combination_id == site_combination_id)
+    )
+    return result.scalars().all()
+
+
+# GET ONE - must be after GET ALL and GET BY SITE
 @router.get("/{incident_id}", response_model=IncidentResponse)
 async def get_incident(incident_id: int, db: AsyncSession = Depends(get_db)):
     """Get an incident by ID"""

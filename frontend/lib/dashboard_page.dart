@@ -18,6 +18,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   late Future<List<Map<String, dynamic>>> _classesData;
   late Future<List<Map<String, dynamic>>> _incidentsData;
+  String? _selectedSite;
 
   final List<Color> _colors = [
     Colors.green,
@@ -30,25 +31,46 @@ class _DashboardPageState extends State<DashboardPage> {
     Colors.pink,
   ];
 
-  @override
+    @override
   void initState() {
     super.initState();
-    _classesData = _fetchClasses();
+    _classesData = _fetchClasses(_selectedSite);
     _incidentsData = _fetchIncidents();
   }
 
   void _refreshData() {
     setState(() {
-      _classesData = _fetchClasses();
-      _incidentsData = _fetchIncidents();
+      _classesData = _fetchClasses(_selectedSite);
+      _incidentsData = _fetchIncidents(_selectedSite);
     });
   }
 
-  Future<List<Map<String, dynamic>>> _fetchClasses() async {
+  int? _getSiteId(String? siteName) {
+    switch (siteName) {
+      case 'elemore_hall':
+        return 1;
+      case 'windlestone':
+        return 2;
+      case 'pacc':
+        return 3;
+      default:
+        return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchClasses([String? siteFilter]) async {
     try {
-      final response = await http.get(
-        Uri.parse('http://localhost:8000/api/classes'),
-      );
+      String url = 'http://localhost:8000/api/classes';
+      
+      // If a site is selected, use the site-specific endpoint
+      if (siteFilter != null) {
+        int? siteId = _getSiteId(siteFilter);
+        if (siteId != null) {
+          url = 'http://localhost:8000/api/classes/site/$siteId';
+        }
+      }
+
+      final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         List<dynamic> jsonData = jsonDecode(response.body);
@@ -90,11 +112,19 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchIncidents() async {
+  Future<List<Map<String, dynamic>>> _fetchIncidents([String? siteFilter]) async {
     try {
-      final response = await http.get(
-        Uri.parse('http://localhost:8000/api/incidents'),
-      );
+      String url = 'http://localhost:8000/api/incidents';
+      
+      // If a site is selected, use the site-specific endpoint
+      if (siteFilter != null) {
+        int? siteId = _getSiteId(siteFilter);
+        if (siteId != null) {
+          url = 'http://localhost:8000/api/incidents/site/$siteId';
+        }
+      }
+
+      final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         List<dynamic> jsonData = jsonDecode(response.body);
@@ -107,7 +137,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
           return {
             'incident_id': item['incident_id'],
-            'title': item['other_activity'] ?? 'Incident',
+            'title': item['action'] ?? item['other_activity'] ?? 'Incident',
             'date': formattedDate,
             'coordinator': 'Staff',
             'action_taken': item['action_taken'] ?? 'Pending',
@@ -191,6 +221,59 @@ class _DashboardPageState extends State<DashboardPage> {
                       ],
                     ),
                     
+                    const SizedBox(height: 20),
+
+                    // SITES DROPDOWN
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.blueGrey[200]!, width: 1.5),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                      ),
+                      child: DropdownButton<String>(
+                        value: _selectedSite,
+                        hint: Text(
+                          'Sites',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blueGrey[700],
+                          ),
+                        ),
+                        isExpanded: true,
+                        underline: const SizedBox(),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'elemore_hall',
+                            child: Text('Elemore Hall'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'windlestone',
+                            child: Text('Windlestone'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'pacc',
+                            child: Text('PACC'),
+                          ),
+                        ],
+                        onChanged: (String? value) {
+                          setState(() {
+                            _selectedSite = value;
+                            _classesData = _fetchClasses(_selectedSite);
+                            _incidentsData = _fetchIncidents(_selectedSite);
+                          });
+                        },
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.blueGrey[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                        dropdownColor: Colors.white,
+                        iconEnabledColor: Colors.blueGrey[600],
+                      ),
+                    ),
+
                     const SizedBox(height: 20),
 
                     // GRID OF CLASSES

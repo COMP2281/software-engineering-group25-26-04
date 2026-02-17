@@ -4,11 +4,12 @@
 # Endpoints for managing classes
 #
 # ENDPOINTS:
-# - GET    /api/classes      - Get all classes
-# - GET    /api/classes/{id} - Get one class
-# - POST   /api/classes      - Create class
-# - PUT    /api/classes/{id} - Update class
-# - DELETE /api/classes/{id} - Delete class
+# - GET    /api/classes           - Get all classes
+# - GET    /api/classes/site/{id} - Get classes by site
+# - GET    /api/classes/{id}      - Get one class
+# - POST   /api/classes           - Create class
+# - PUT    /api/classes/{id}      - Update class
+# - DELETE /api/classes/{id}      - Delete class
 # =============================================================================
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,9 +25,7 @@ from app.schemas import ClassCreate, ClassUpdate, ClassResponse, Message
 router = APIRouter(prefix="/api/classes", tags=["Classes"])
 
 
-# -----------------------------------------------------------------------------
-# GET ALL
-# -----------------------------------------------------------------------------
+# GET ALL - must be before GET ONE to match correctly
 @router.get("/", response_model=list[ClassResponse])
 async def get_classes(db: AsyncSession = Depends(get_db)):
     """Get all classes"""
@@ -34,9 +33,17 @@ async def get_classes(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-# -----------------------------------------------------------------------------
-# GET ONE
-# -----------------------------------------------------------------------------
+# GET CLASSES BY SITE - must be before GET ONE
+@router.get("/site/{site_combination_id}", response_model=list[ClassResponse])
+async def get_classes_by_site(site_combination_id: int, db: AsyncSession = Depends(get_db)):
+    """Get all classes for a specific site"""
+    result = await db.execute(
+        select(Class).where(Class.site_combination_id == site_combination_id)
+    )
+    return result.scalars().all()
+
+
+# GET ONE - must be after GET ALL and GET BY SITE
 @router.get("/{class_id}", response_model=ClassResponse)
 async def get_class(class_id: int, db: AsyncSession = Depends(get_db)):
     """Get a class by ID"""

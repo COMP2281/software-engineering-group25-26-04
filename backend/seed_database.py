@@ -170,10 +170,20 @@ async def seed_database():
         # =============================================================================
         print("  ✓ Creating classes...")
         classes = [
-            Class(class_name="Mathematics 9A", staff_id=staff_members[1].staff_id, site_combination_id=1),  # Bob
-            Class(class_name="Mathematics 10A", staff_id=staff_members[1].staff_id, site_combination_id=2),  # Bob
-            Class(class_name="English 9B", staff_id=staff_members[2].staff_id, site_combination_id=3),  # Carol
-            Class(class_name="Science 10C", staff_id=staff_members[3].staff_id, site_combination_id=7),  # David
+            # Elemore Hall (site_combination_id=1)
+            Class(class_name="Elemore - Mathematics 9A", staff_id=staff_members[1].staff_id, site_combination_id=1),
+            Class(class_name="Elemore - English 10B", staff_id=staff_members[2].staff_id, site_combination_id=1),
+            Class(class_name="Elemore - Science 9C", staff_id=staff_members[3].staff_id, site_combination_id=1),
+            
+            # Windlestone (site_combination_id=2)
+            Class(class_name="Windlestone - Mathematics 10A", staff_id=staff_members[1].staff_id, site_combination_id=2),
+            Class(class_name="Windlestone - History 11B", staff_id=staff_members[2].staff_id, site_combination_id=2),
+            Class(class_name="Windlestone - PE 9D", staff_id=staff_members[3].staff_id, site_combination_id=2),
+            
+            # PACC (site_combination_id=3)
+            Class(class_name="PACC - Art 10E", staff_id=staff_members[1].staff_id, site_combination_id=3),
+            Class(class_name="PACC - Drama 11F", staff_id=staff_members[2].staff_id, site_combination_id=3),
+            Class(class_name="PACC - Music 9G", staff_id=staff_members[3].staff_id, site_combination_id=3),
         ]
         session.add_all(classes)
         await session.flush()
@@ -183,25 +193,41 @@ async def seed_database():
         # =============================================================================
         print("  ✓ Enrolling students in classes...")
         enrollments = [
-            ClassStudent(class_id=classes[0].class_id, student_id=students[0].student_id),  # Math 9A
+            # Elemore Hall classes
+            ClassStudent(class_id=classes[0].class_id, student_id=students[0].student_id),  # Elemore Math 9A
             ClassStudent(class_id=classes[0].class_id, student_id=students[1].student_id),
-            ClassStudent(class_id=classes[0].class_id, student_id=students[2].student_id),
-            ClassStudent(class_id=classes[0].class_id, student_id=students[5].student_id),
-            ClassStudent(class_id=classes[0].class_id, student_id=students[7].student_id),
+            ClassStudent(class_id=classes[0].class_id, student_id=students[8].student_id),
             
-            ClassStudent(class_id=classes[1].class_id, student_id=students[3].student_id),  # Math 10A
-            ClassStudent(class_id=classes[1].class_id, student_id=students[4].student_id),
-            ClassStudent(class_id=classes[1].class_id, student_id=students[6].student_id),
-            ClassStudent(class_id=classes[1].class_id, student_id=students[8].student_id),
+            ClassStudent(class_id=classes[1].class_id, student_id=students[0].student_id),  # Elemore English 10B
+            ClassStudent(class_id=classes[1].class_id, student_id=students[2].student_id),
+            ClassStudent(class_id=classes[1].class_id, student_id=students[5].student_id),
             
-            ClassStudent(class_id=classes[2].class_id, student_id=students[0].student_id),  # English 9B
-            ClassStudent(class_id=classes[2].class_id, student_id=students[1].student_id),
-            ClassStudent(class_id=classes[2].class_id, student_id=students[5].student_id),
-            ClassStudent(class_id=classes[2].class_id, student_id=students[9].student_id),
+            ClassStudent(class_id=classes[2].class_id, student_id=students[1].student_id),  # Elemore Science 9C
+            ClassStudent(class_id=classes[2].class_id, student_id=students[8].student_id),
             
-            ClassStudent(class_id=classes[3].class_id, student_id=students[3].student_id),  # Science 10C
-            ClassStudent(class_id=classes[3].class_id, student_id=students[4].student_id),
-            ClassStudent(class_id=classes[3].class_id, student_id=students[8].student_id),
+            # Windlestone classes
+            ClassStudent(class_id=classes[3].class_id, student_id=students[1].student_id),  # Windlestone Math 10A
+            ClassStudent(class_id=classes[3].class_id, student_id=students[3].student_id),
+            ClassStudent(class_id=classes[3].class_id, student_id=students[9].student_id),
+            
+            ClassStudent(class_id=classes[4].class_id, student_id=students[3].student_id),  # Windlestone History 11B
+            ClassStudent(class_id=classes[4].class_id, student_id=students[4].student_id),
+            ClassStudent(class_id=classes[4].class_id, student_id=students[6].student_id),
+            
+            ClassStudent(class_id=classes[5].class_id, student_id=students[1].student_id),  # Windlestone PE 9D
+            ClassStudent(class_id=classes[5].class_id, student_id=students[9].student_id),
+            
+            # PACC classes
+            ClassStudent(class_id=classes[6].class_id, student_id=students[2].student_id),  # PACC Art 10E
+            ClassStudent(class_id=classes[6].class_id, student_id=students[4].student_id),
+            ClassStudent(class_id=classes[6].class_id, student_id=students[7].student_id),
+            
+            ClassStudent(class_id=classes[7].class_id, student_id=students[5].student_id),  # PACC Drama 11F
+            ClassStudent(class_id=classes[7].class_id, student_id=students[6].student_id),
+            
+            ClassStudent(class_id=classes[8].class_id, student_id=students[2].student_id),  # PACC Music 9G
+            ClassStudent(class_id=classes[8].class_id, student_id=students[7].student_id),
+            ClassStudent(class_id=classes[8].class_id, student_id=students[9].student_id),
         ]
         session.add_all(enrollments)
         await session.flush()
@@ -260,41 +286,89 @@ async def seed_database():
         # =============================================================================
         print("  ✓ Creating incidents...")
         incidents = [
+            # ELEMORE HALL INCIDENTS
             Incident(
                 duty_coordinator_id=staff_members[0].staff_id,  # Alice
                 incident_date=today - timedelta(days=2),
-                class_id=classes[0].class_id,
-                action="Student was late to class",
-                note="Arrived 10 minutes after register",
+                class_id=classes[0].class_id,  # Elemore Math
+                action="Student was late to Elemore Hall class",
+                note="Arrived 10 minutes after register at Elemore",
                 action_taken="Verbal warning given",
                 outcome="Student apologized and settled"
             ),
             Incident(
                 duty_coordinator_id=staff_members[0].staff_id,
                 incident_date=today - timedelta(days=5),
-                class_id=classes[2].class_id,
-                action="Disruptive behavior during lesson",
+                class_id=classes[1].class_id,  # Elemore English
+                action="Disruptive behavior in Elemore Hall English class",
                 note="Talking during instruction without permission",
                 action_taken="Sent to think about behavior",
                 outcome="Improved after discussion"
             ),
             Incident(
-                duty_coordinator_id=staff_members[4].staff_id,  # Emma
-                incident_date=today - timedelta(days=1),
-                other_activity="Lunch break",
-                action="Minor dispute between students",
-                note="Two students disagreed over lunch queue",
-                action_taken="Separated and mediated discussion",
-                outcome="Agreement reached, no further action needed"
-            ),
-            Incident(
                 duty_coordinator_id=staff_members[0].staff_id,
                 incident_date=today - timedelta(days=3),
-                class_id=classes[1].class_id,
-                action="Late homework submission",
+                class_id=classes[2].class_id,  # Elemore Science
+                action="Late homework submission from Elemore Hall student",
                 note="Assignment submitted without prior notification",
                 action_taken="Discussed expectations",
                 outcome="Student will submit on time going forward"
+            ),
+            # WINDLESTONE INCIDENTS
+            Incident(
+                duty_coordinator_id=staff_members[1].staff_id,  # Bob
+                incident_date=today - timedelta(days=4),
+                class_id=classes[3].class_id,  # Windlestone Math
+                action="Windlestone student forgot PE uniform",
+                note="At Windlestone during Math class",
+                action_taken="Allowed to participate in alternative activity",
+                outcome="Student brought uniform next day"
+            ),
+            Incident(
+                duty_coordinator_id=staff_members[2].staff_id,  # Carol
+                incident_date=today - timedelta(days=1),
+                class_id=classes[4].class_id,  # Windlestone History
+                action="Windlestone History class - minor conflict between students",
+                note="Two students disagreed during group work",
+                action_taken="Separated groups and mediated discussion",
+                outcome="Agreement reached, completed assignment together"
+            ),
+            Incident(
+                duty_coordinator_id=staff_members[1].staff_id,
+                incident_date=today,
+                class_id=classes[5].class_id,  # Windlestone PE
+                action="Windlestone PE injury - minor twisted ankle",
+                note="Student twisted ankle during Windlestone PE class",
+                action_taken="First aid applied, parent contacted",
+                outcome="Student sent home for observation"
+            ),
+            # PACC INCIDENTS
+            Incident(
+                duty_coordinator_id=staff_members[2].staff_id,  # Carol
+                incident_date=today - timedelta(days=6),
+                class_id=classes[6].class_id,  # PACC Art
+                action="PACC Art student used materials without permission",
+                note="Expensive art supplies used incorrectly at PACC",
+                action_taken="Discussed proper procedure and respect for materials",
+                outcome="Student agreed to be more careful, supervised going forward"
+            ),
+            Incident(
+                duty_coordinator_id=staff_members[3].staff_id,  # David
+                incident_date=today - timedelta(days=2),
+                class_id=classes[7].class_id,  # PACC Drama
+                action="PACC Drama student left class without permission",
+                note="Student walked out during PACC Drama rehearsal",
+                action_taken="Called parents and discussed frustration",
+                outcome="Resolved - student returned and completed rehearsal"
+            ),
+            Incident(
+                duty_coordinator_id=staff_members[2].staff_id,
+                incident_date=today - timedelta(days=4),
+                class_id=classes[8].class_id,  # PACC Music
+                action="PACC Music equipment damage - drum stand broken",
+                note="Drum stand damaged during PACC Music session",
+                action_taken="Reported to maintenance, equipment secured",
+                outcome="Stand repaired - incident logged for records"
             ),
         ]
         session.add_all(incidents)
