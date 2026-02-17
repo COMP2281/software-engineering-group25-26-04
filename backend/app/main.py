@@ -7,6 +7,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 from app.config import settings
 from app.database import create_tables
@@ -22,9 +24,9 @@ async def lifespan(app: FastAPI):
     print("🚀 Starting up...")
     await create_tables()
     print("✅ Database ready!")
-    
+
     yield  # App runs here
-    
+
     # Shutdown
     print("👋 Shutting down...")
 
@@ -51,6 +53,13 @@ app.add_middleware(
 
 
 # -----------------------------------------------------------------------------
+# STATIC FILES (admin panel)
+# -----------------------------------------------------------------------------
+admin_dir = os.path.join(os.path.dirname(__file__), "../../frontend/build/web")
+app.mount("/admin", StaticFiles(directory=admin_dir, html=True), name="admin")
+
+
+# -----------------------------------------------------------------------------
 # REGISTER ROUTES
 # -----------------------------------------------------------------------------
 for router in all_routers:
@@ -68,10 +77,10 @@ async def root():
 # =============================================================================
 # HOW TO RUN
 # =============================================================================
-# 
+#
 # Development:
 #   uvicorn app.main:app --reload
-# 
+#
 # Then open: http://localhost:8000/docs
-# 
+#
 # =============================================================================
