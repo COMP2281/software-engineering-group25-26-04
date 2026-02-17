@@ -388,7 +388,7 @@ class _DashboardPageState extends State<DashboardPage> {
                            Row(
                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                              children: [
-                               Text("Analytics", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.blueGrey[800])),
+                               Text("OffSite students", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.blueGrey[800])),
                                TextButton(
                                  onPressed: () {
                                   Navigator.push(
