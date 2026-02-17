@@ -11,6 +11,27 @@ from pydantic import BaseModel, ConfigDict
 
 
 # =============================================================================
+# SITE SCHEMAS
+# =============================================================================
+class SiteCreate(BaseModel):
+    site1: bool
+    site2: bool
+    site3: bool
+
+class SiteUpdate(BaseModel):
+    site1: Optional[bool] = None
+    site2: Optional[bool] = None
+    site3: Optional[bool] = None
+
+class SiteResponse(BaseModel):
+    combination_id: int
+    site1: bool
+    site2: bool
+    site3: bool
+    model_config = ConfigDict(from_attributes=True)
+
+
+# =============================================================================
 # ACCESS LEVEL SCHEMAS
 # =============================================================================
 class AccessLevelCreate(BaseModel):
