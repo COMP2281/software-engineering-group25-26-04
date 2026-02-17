@@ -393,7 +393,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                  onPressed: () {
                                   Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AnalyticsPage()),
+      MaterialPageRoute(builder: (context) => const OffsiteStudentsPage()),
     );
                                  }, 
                                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), backgroundColor: Colors.blue[50], shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), 
