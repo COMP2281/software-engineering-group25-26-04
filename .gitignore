@@ -57,9 +57,6 @@ htmlcov/
 *.sqlite3
 app.db
 
-# =============================================================================
-# FLUTTER/DART (Frontend)
-# =============================================================================
 # Flutter build outputs
 .dart_tool/
 .flutter-plugins
@@ -83,23 +80,57 @@ coverage/
 # Flutter ephemeral directories
 **/ephemeral/
 
-# =============================================================================
-# PLATFORM-SPECIFIC (Android/iOS/Desktop)
-# =============================================================================
+# Platform-specific
 # Android
-.gradle/
-gradle-wrapper.jar
-gradlew
-gradlew.bat
-local.properties
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+*.jks
+*.keystore
 *.apk
 *.aab
 
 # iOS/macOS
-**/Pods/
-**/xcuserdata/
-**/.symlinks/
-**/DerivedData/
+**/ios/**/*.framework
+**/ios/**/*.xcconfig
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Flutter/.last_build_id
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/ephemeral
+**/macos/Flutter/Flutter-Generated.xcconfig
+**/macos/Flutter/.last_build_id
+
+# Windows
+**/windows/flutter/generated_plugin_registrant.*
+**/windows/flutter/generated_plugins.*
+**/windows/flutter/.last_build_id
+
+# Linux
+**/linux/flutter/generated_plugin_registrant.*
+**/linux/flutter/generated_plugins.*
+**/linux/flutter/.last_build_id
+
+# Web
+**/web/icons/Icon-*
+**/web/icons/Icon-maskable-*
+**/web/manifest.json
+
+# Exceptions
+!**/android/**/src/main/**/GeneratedPluginRegistrant.java
+!**/ios/**/GeneratedPluginRegistrant.*
+!**/macos/**/GeneratedPluginRegistrant.swift
+!**/windows/**/generated_plugin_registrant.*
+!**/linux/**/generated_plugin_registrant.*
 
 # =============================================================================
 # SECRETS & ENVIRONMENT
@@ -120,6 +151,7 @@ google-services.json
 *.swo
 *~
 *.iml
+.github/
 
 # =============================================================================
 # OS
