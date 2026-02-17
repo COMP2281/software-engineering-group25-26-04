@@ -284,7 +284,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 children: [
                   // LOGS CARD
                   Expanded(
-                    flex: 2, 
+                    flex: 1, 
                     child: Container(
                       margin: const EdgeInsets.fromLTRB(0, 16, 16, 8),
                       padding: const EdgeInsets.all(24.0),
