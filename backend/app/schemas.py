@@ -16,13 +16,16 @@ from pydantic import BaseModel, ConfigDict
 class AccessLevelCreate(BaseModel):
     role: str
     description: Optional[str] = None
+    site_combination_id: int
 
 class AccessLevelUpdate(BaseModel):
     description: Optional[str] = None
+    site_combination_id: Optional[int] = None
 
 class AccessLevelResponse(BaseModel):
     role: str
     description: Optional[str]
+    site_combination_id: int
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -71,27 +74,18 @@ class UserResponse(BaseModel):
 class StudentCreate(BaseModel):
     first_name: str
     last_name: str
-    date_of_birth: Optional[Date] = None
-    year_group: Optional[int] = None
-    has_disability: bool = False
-    disability_notes: Optional[str] = None
+    site_combination_id: int
 
 class StudentUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    date_of_birth: Optional[Date] = None
-    year_group: Optional[int] = None
-    has_disability: Optional[bool] = None
-    disability_notes: Optional[str] = None
+    site_combination_id: Optional[int] = None
 
 class StudentResponse(BaseModel):
     student_id: int
     first_name: str
     last_name: str
-    date_of_birth: Optional[Date]
-    year_group: Optional[int]
-    has_disability: bool
-    disability_notes: Optional[str]
+    site_combination_id: int
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -101,15 +95,18 @@ class StudentResponse(BaseModel):
 class ClassCreate(BaseModel):
     class_name: str
     staff_id: int  # Teacher
+    site_combination_id: int
 
 class ClassUpdate(BaseModel):
     class_name: Optional[str] = None
     staff_id: Optional[int] = None
+    site_combination_id: Optional[int] = None
 
 class ClassResponse(BaseModel):
     class_id: int
     class_name: str
     staff_id: int
+    site_combination_id: int
     model_config = ConfigDict(from_attributes=True)
 
 
