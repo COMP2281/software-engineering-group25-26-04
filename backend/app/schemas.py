@@ -152,17 +152,23 @@ class RegisterResponse(BaseModel):
 class AttendanceCreate(BaseModel):
     register_id: int
     student_id: int
-    present: bool = False
+    am_present: bool = False
+    pm_present: bool = False
+    on_site: bool = False
     note: Optional[str] = None
 
 class AttendanceUpdate(BaseModel):
-    present: Optional[bool] = None
+    am_present: Optional[bool] = None
+    pm_present: Optional[bool] = None
+    on_site: Optional[bool] = None
     note: Optional[str] = None
 
 class AttendanceResponse(BaseModel):
     register_id: int
     student_id: int
-    present: bool
+    am_present: bool
+    pm_present: bool
+    on_site: bool
     note: Optional[str]
     model_config = ConfigDict(from_attributes=True)
 

@@ -141,7 +141,9 @@ class Attendance(Base):
     
     register_id: Mapped[int] = mapped_column(Integer, ForeignKey("registers.register_id"), primary_key=True)
     student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.student_id"), primary_key=True)
-    present: Mapped[bool] = mapped_column(Boolean, default=False)
+    am_present: Mapped[bool] = mapped_column(Boolean, default=False)
+    pm_present: Mapped[bool] = mapped_column(Boolean, default=False)
+    on_site: Mapped[bool] = mapped_column(Boolean, default=False)
     note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Relationships
