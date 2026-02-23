@@ -19,6 +19,7 @@ class _DashboardPageState extends State<DashboardPage> {
   late Future<List<Map<String, dynamic>>> _classesData;
   late Future<List<Map<String, dynamic>>> _incidentsData;
   String? _selectedSite;
+  String? _selectedOffsiteSite;
 
   final List<Color> _colors = [
     Colors.green,
@@ -469,87 +470,93 @@ class _DashboardPageState extends State<DashboardPage> {
                          children: [
                            // Header
                            Row(
-                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                             children: [
-                               Text("OffSite students", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.blueGrey[800])),
-                               TextButton(
-                                 onPressed: () {
-                                  Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const OffsiteStudentsPage()),
-    );
-                                 }, 
-                                 style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), backgroundColor: Colors.blue[50], shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), 
-                                 child: Text("View All", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue[700]))
-                               )
-                             ],
-                           ),
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+
+                                Column(
+                                       crossAxisAlignment: CrossAxisAlignment.start,
+                                       children: [
+                                       Text(
+                                               "OffSite students",
+                                                style: TextStyle(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.blueGrey[800],
+                                             ),
+                                            ),
+                                 const SizedBox(height: 8),
+
+                                 Container(
+                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                           decoration: BoxDecoration(
+                                          border: Border.all(color: Colors.blueGrey[200]!, width: 1.2),
+                                          borderRadius: BorderRadius.circular(10),
+                                           color: Colors.white,
+                                          ),
+                                          child: DropdownButton<String>(
+                                          value: _selectedOffsiteSite,
+                                          hint: Text(
+                                          'Filter by Site',
+                                          style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.blueGrey[600],
+                                           ),
+                                         ),
+                                         underline: const SizedBox(),
+                                           items: const [
+                                      DropdownMenuItem(
+                                                      value: 'elemore_hall',
+                                                      child: Text('Elemore Hall'),
+                                                       ),
+                                      DropdownMenuItem(
+                                                      value: 'windlestone',
+                                                      child: Text('Windlestone'),
+                                                       ),
+                                      DropdownMenuItem(
+                                                      value: 'pacc',
+                                                      child: Text('PACC'),
+                                                      ),
+                                                      ],
+                                       onChanged: (value) {
+                                      setState(() {
+                                      _selectedOffsiteSite = value;
+              });
+            },
+          ),
+        ),
+      ],
+    ),
+
+    TextButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const OffsiteStudentsPage()),
+        );
+      },
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        backgroundColor: Colors.blue[50],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: Text(
+        "View All",
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.blue[700],
+        ),
+      ),
+    ),
+  ],
+),
                            
-                           const SizedBox(height: 16),
+                           
 
-                           // --- FL_CHART IMPLEMENTATION ---
-                           Expanded(
-                             child: BarChart(
-                               BarChartData(
-                                 alignment: BarChartAlignment.spaceAround,
-                                 maxY: 20,
-                                 gridData: const FlGridData(show: false),
-                                 borderData: FlBorderData(show: false),
-                                 barTouchData: BarTouchData(
-                                   enabled: true,
-                                   touchTooltipData: BarTouchTooltipData(
-                                     tooltipBgColor: Colors.blueGrey.shade800,
-                                     tooltipPadding: const EdgeInsets.all(8),
-                                     tooltipMargin: 8,
-                                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                                       return BarTooltipItem(
-                                         rod.toY.round().toString(),
-                                         const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                       );
-                                     },
-                                   ),
-                                 ),
-                                 titlesData: FlTitlesData(
-                                   show: true,
-                                   bottomTitles: AxisTitles(
-                                     sideTitles: SideTitles(
-                                       showTitles: true,
-                                       getTitlesWidget: (double value, TitleMeta meta) {
-                                          const style = TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12);
-                                          Widget text;
-                                          switch (value.toInt()) {
-                                            case 0: text = const Text('M', style: style); break;
-                                            case 1: text = const Text('T', style: style); break;
-                                            case 2: text = const Text('W', style: style); break;
-                                            case 3: text = const Text('T', style: style); break;
-                                            case 4: text = const Text('F', style: style); break;
-                                            case 5: text = const Text('S', style: style); break;
-                                            case 6: text = const Text('S', style: style); break;
-                                            default: text = const Text('', style: style);
-                                          }
-                                          return SideTitleWidget(axisSide: meta.axisSide, child: text);
-                                       },
-                                     ),
-                                   ),
-                                   leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                 ),
-                                 barGroups: [
-                                   _makeGroupData(0, 12, Colors.indigo[200]!),
-                                   _makeGroupData(1, 16, Colors.indigo[300]!),
-                                   _makeGroupData(2, 18, Colors.indigo[400]!),
-                                   _makeGroupData(3, 14, Colors.indigo[300]!),
-                                   _makeGroupData(4, 10, Colors.indigo[200]!),
-                                   _makeGroupData(5, 5, Colors.red[300]!),
-                                   _makeGroupData(6, 4, Colors.red[400]!),
-                                 ],
-                               ),
-                             ),
-                           ),
-
-                           const SizedBox(height: 12),
-                           Row(children: [const Icon(Icons.trending_down, color: Colors.red, size: 20), const SizedBox(width: 8), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("Logs down 30%", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)), Text("Activity is lower than usual.", style: TextStyle(color: Colors.red[300], fontSize: 11))])]),
                          ]
                       ),
                     ),
@@ -563,24 +570,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  BarChartGroupData _makeGroupData(int x, double y, Color color) {
-    return BarChartGroupData(
-      x: x,
-      barRods: [
-        BarChartRodData(
-          toY: y,
-          color: color,
-          width: 22, 
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(6), topRight: Radius.circular(6)),
-          backDrawRodData: BackgroundBarChartRodData(
-            show: true,
-            toY: 20, 
-            color: Colors.grey[100], 
-          ),
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildLogItem(String title, String date, String coord, String status, Color statusColor) {
     return Container(
