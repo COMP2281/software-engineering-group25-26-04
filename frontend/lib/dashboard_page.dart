@@ -7,6 +7,7 @@ import 'dart:developer';
 import 'logs_page.dart';
 import 'log_modal.dart';
 import 'analytics_page.dart';
+import 'config.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -61,13 +62,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<List<Map<String, dynamic>>> _fetchClasses([String? siteFilter]) async {
     try {
-      String url = 'http://localhost:8000/api/classes';
+      String url = '${AppConfig.apiUrl}/api/classes/';
       
       // If a site is selected, use the site-specific endpoint
       if (siteFilter != null) {
         int? siteId = _getSiteId(siteFilter);
         if (siteId != null) {
-          url = 'http://localhost:8000/api/classes/site/$siteId';
+          url = '${AppConfig.apiUrl}/api/classes/site/$siteId/';
         }
       }
 
@@ -84,7 +85,7 @@ class _DashboardPageState extends State<DashboardPage> {
           int studentCount = 0;
           try {
             final studentsResponse = await http.get(
-              Uri.parse('http://localhost:8000/api/class-students/class/${item['class_id']}'),
+              Uri.parse('${AppConfig.apiUrl}/api/class-students/class/${item['class_id']}/'),
             );
             
             if (studentsResponse.statusCode == 200) {
@@ -115,13 +116,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<List<Map<String, dynamic>>> _fetchIncidents([String? siteFilter]) async {
     try {
-      String url = 'http://localhost:8000/api/incidents';
+      String url = '${AppConfig.apiUrl}/api/incidents/';
       
       // If a site is selected, use the site-specific endpoint
       if (siteFilter != null) {
         int? siteId = _getSiteId(siteFilter);
         if (siteId != null) {
-          url = 'http://localhost:8000/api/incidents/site/$siteId';
+          url = '${AppConfig.apiUrl}/api/incidents/site/$siteId/';
         }
       }
 
@@ -159,14 +160,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
+    return Theme(
+      data: ThemeData(
         textTheme: GoogleFonts.interTextTheme(
           Theme.of(context).textTheme,
         ),
       ),
-      home: Scaffold(
+      child: Scaffold(
         backgroundColor: const Color(0xFFF3F4F6),
         body: Row(
           children: [
@@ -439,11 +439,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                 );
                               }, style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Colors.grey)), elevation: 0), child: const Text("View Logs"))),
                               const SizedBox(width: 12),
-                              Expanded(child: ElevatedButton(onPressed: () {
-                                showDialog(
-                                context: context,
-                                builder: (context) => const CreateLogModal(),
-                              );
+                              Expanded(child: ElevatedButton(onPressed: () async {
+                                final result = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => const CreateLogModal(),
+                                );
+                                if (result == true) {
+                                  _refreshData();
+                                }
                               }, style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), elevation: 0), child: const Text("Add Log"))),
                             ],
                           )

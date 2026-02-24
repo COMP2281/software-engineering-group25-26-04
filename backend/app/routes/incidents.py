@@ -29,7 +29,7 @@ router = APIRouter(prefix="/api/incidents", tags=["Incidents"])
 @router.get("/", response_model=list[IncidentResponse])
 async def get_incidents(db: AsyncSession = Depends(get_db)):
     """Get all incidents"""
-    result = await db.execute(select(Incident))
+    result = await db.execute(select(Incident).order_by(Incident.incident_id.desc()))
     return result.scalars().all()
 
 
@@ -41,6 +41,7 @@ async def get_incidents_by_site(site_combination_id: int, db: AsyncSession = Dep
         select(Incident)
         .join(Class, Incident.class_id == Class.class_id, isouter=True)
         .where(Class.site_combination_id == site_combination_id)
+        .order_by(Incident.incident_id.desc())
     )
     return result.scalars().all()
 

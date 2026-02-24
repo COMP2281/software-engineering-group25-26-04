@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:developer';
+import 'config.dart';
 
 class CreateLogModal extends StatefulWidget {
   const CreateLogModal({super.key});
@@ -17,6 +21,10 @@ class _CreateLogModalState extends State<CreateLogModal> {
   final TextEditingController _activityController = TextEditingController();
   final TextEditingController _sheetController = TextEditingController();
   
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _actionsTakenController = TextEditingController();
+  final TextEditingController _outcomeController = TextEditingController();
+
   bool _isAuthorSameAsStaff = false;
   DateTime _selectedDate = DateTime.now();
   
@@ -59,6 +67,9 @@ class _CreateLogModalState extends State<CreateLogModal> {
     _dateController.dispose();
     _activityController.dispose();
     _sheetController.dispose();
+    _descriptionController.dispose();
+    _actionsTakenController.dispose();
+    _outcomeController.dispose();
     super.dispose();
   }
 
@@ -348,11 +359,11 @@ class _CreateLogModalState extends State<CreateLogModal> {
   Widget _buildDescriptionFields() {
     return Column(
       children: [
-        TextFormField(maxLines: 2, decoration: const InputDecoration(labelText: "Brief Description", border: OutlineInputBorder())),
+        TextFormField(controller: _descriptionController, maxLines: 2, decoration: const InputDecoration(labelText: "Brief Description", border: OutlineInputBorder())),
         const SizedBox(height: 15),
-        TextFormField(maxLines: 2, decoration: const InputDecoration(labelText: "Actions taken by staff", border: OutlineInputBorder())),
+        TextFormField(controller: _actionsTakenController, maxLines: 2, decoration: const InputDecoration(labelText: "Actions taken by staff", border: OutlineInputBorder())),
         const SizedBox(height: 15),
-        TextFormField(maxLines: 2, decoration: const InputDecoration(labelText: "Outcome/ Consequence", border: OutlineInputBorder())),
+        TextFormField(controller: _outcomeController, maxLines: 2, decoration: const InputDecoration(labelText: "Outcome/ Consequence", border: OutlineInputBorder())),
         const SizedBox(height: 25),
         Row(
           children: [
@@ -386,13 +397,64 @@ class _CreateLogModalState extends State<CreateLogModal> {
     );
   }
 
+  bool _isLoading = false;
+
+  Future<void> _submitLog() async {
+    if (_coordinatorController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a Duty Coordinator')));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final data = {
+      // In a real app, this should map to the selected staff member's ID.
+      // We hardcode it to 1 since _coordinatorController is just text right now.
+      "duty_coordinator_id": 1,
+      "incident_date": DateFormat('yyyy-MM-dd').format(_selectedDate),
+      "class_id": null,
+      "other_activity": _activityController.text.isNotEmpty ? _activityController.text : _selectedReasons.join(", "),
+      "action": _isAuthorSameAsStaff ? "Author: ${_authorController.text}" : null,
+      "note": _descriptionController.text,
+      "action_taken": _actionsTakenController.text,
+      "outcome": _outcomeController.text,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiUrl}/api/incidents/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (mounted) {
+          Navigator.pop(context, true); // True means success, so dashboard can refresh
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save log: ${response.body}')));
+        }
+      }
+    } catch (e) {
+      log('Error saving log: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   Widget _buildActionButtons() {
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(onPressed: _isLoading ? null : () => Navigator.pop(context), child: const Text("Cancel")),
           const SizedBox(width: 10),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -400,8 +462,10 @@ class _CreateLogModalState extends State<CreateLogModal> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             ),
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Save Log Entry", style: TextStyle(fontWeight: FontWeight.bold)),
+            onPressed: _isLoading ? null : _submitLog,
+            child: _isLoading 
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Text("Save Log Entry", style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
