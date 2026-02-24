@@ -15,6 +15,24 @@ from app.database import Base
 
 
 # =============================================================================
+# SITES
+# =============================================================================
+class Site(Base):
+    """Site combination lookup table"""
+    __tablename__ = "sites"
+
+    combination_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    site1: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    site2: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    site3: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    # Relationships
+    access_levels: Mapped[List["AccessLevel"]] = relationship("AccessLevel", back_populates="site")
+    classes: Mapped[List["Class"]] = relationship("Class", back_populates="site")
+    students: Mapped[List["Student"]] = relationship("Student", back_populates="site")
+
+
+# =============================================================================
 # ACCESS LEVELS
 # =============================================================================
 class AccessLevel(Base):
@@ -23,9 +41,11 @@ class AccessLevel(Base):
     
     role: Mapped[str] = mapped_column(String(50), primary_key=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    site_combination_id: Mapped[int] = mapped_column(Integer, ForeignKey("sites.combination_id"))
     
     # Relationship: all staff with this access level
     staff_members: Mapped[List["Staff"]] = relationship("Staff", back_populates="access")
+    site: Mapped["Site"] = relationship("Site", back_populates="access_levels")
 
 
 # =============================================================================
@@ -73,15 +93,13 @@ class Student(Base):
     student_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))
-    date_of_birth: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    year_group: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    has_disability: Mapped[bool] = mapped_column(Boolean, default=False)
-    disability_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    site_combination_id: Mapped[int] = mapped_column(Integer, ForeignKey("sites.combination_id"))
     
     # Relationships
     class_enrollments: Mapped[List["ClassStudent"]] = relationship("ClassStudent", back_populates="student")
     attendance_records: Mapped[List["Attendance"]] = relationship("Attendance", back_populates="student")
     incidents: Mapped[List["StudentIncident"]] = relationship("StudentIncident", back_populates="student")
+    site: Mapped["Site"] = relationship("Site", back_populates="students")
 
 
 # =============================================================================
@@ -94,11 +112,13 @@ class Class(Base):
     class_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     class_name: Mapped[str] = mapped_column(String(100))
     staff_id: Mapped[int] = mapped_column(Integer, ForeignKey("staff.staff_id"))
+    site_combination_id: Mapped[int] = mapped_column(Integer, ForeignKey("sites.combination_id"))
     
     # Relationships
     teacher: Mapped["Staff"] = relationship("Staff", back_populates="classes")
     student_enrollments: Mapped[List["ClassStudent"]] = relationship("ClassStudent", back_populates="class_")
     registers: Mapped[List["Register"]] = relationship("Register", back_populates="class_")
+    site: Mapped["Site"] = relationship("Site", back_populates="classes")
 
 
 # =============================================================================

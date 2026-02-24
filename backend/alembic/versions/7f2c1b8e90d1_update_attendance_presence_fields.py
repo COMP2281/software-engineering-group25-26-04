@@ -19,15 +19,26 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("attendance", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("am_present", sa.Boolean(), nullable=False, server_default=sa.false()))
-        batch_op.add_column(sa.Column("pm_present", sa.Boolean(), nullable=False, server_default=sa.false()))
-        batch_op.add_column(sa.Column("on_site", sa.Boolean(), nullable=False, server_default=sa.false()))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"] for column in inspector.get_columns("attendance")}
 
-    op.execute("UPDATE attendance SET am_present = present, pm_present = present, on_site = present")
+    if {"am_present", "pm_present", "on_site"}.issubset(columns) and "present" not in columns:
+        return
+
+    if "am_present" not in columns:
+        op.add_column("attendance", sa.Column("am_present", sa.Boolean(), nullable=False, server_default=sa.false()))
+    if "pm_present" not in columns:
+        op.add_column("attendance", sa.Column("pm_present", sa.Boolean(), nullable=False, server_default=sa.false()))
+    if "on_site" not in columns:
+        op.add_column("attendance", sa.Column("on_site", sa.Boolean(), nullable=False, server_default=sa.false()))
+
+    if "present" in columns:
+        op.execute("UPDATE attendance SET am_present = present, pm_present = present, on_site = present")
+        with op.batch_alter_table("attendance", schema=None) as batch_op:
+            batch_op.drop_column("present")
 
     with op.batch_alter_table("attendance", schema=None) as batch_op:
-        batch_op.drop_column("present")
         batch_op.alter_column("am_present", server_default=None)
         batch_op.alter_column("pm_present", server_default=None)
         batch_op.alter_column("on_site", server_default=None)
