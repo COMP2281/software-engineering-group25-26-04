@@ -1,22 +1,10 @@
+import 'dart:convert';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: OffsiteStudentsPage(),
-    );
-  }
-}
-
-/* -------------------- OFFSITE STUDENTS PAGE -------------------- */
+import 'config.dart';
 
 class OffsiteStudentsPage extends StatefulWidget {
   const OffsiteStudentsPage({super.key});
@@ -26,173 +14,285 @@ class OffsiteStudentsPage extends StatefulWidget {
 }
 
 class _OffsiteStudentsPageState extends State<OffsiteStudentsPage> {
-
   String? _selectedSite;
+  late Future<List<Map<String, dynamic>>> _offsiteFuture;
 
-  // 🔹 Sample Data (now includes site field)
-  final List<Map<String, String>> students = const [
-    {
-      "name": "Emily Johnson",
-      "reason": "Medical Appointment",
-      "time": "9:00 AM - 11:00 AM",
-      "site": "Elemore Hall"
-    },
-    {
-      "name": "Liam Carter",
-      "reason": "School Trip",
-      "time": "All Day",
-      "site": "Windlestone"
-    },
-    {
-      "name": "Sophia Martinez",
-      "reason": "Family Emergency",
-      "time": "10:30 AM - 12:00 PM",
-      "site": "PACC"
-    },
-    {
-      "name": "Noah Williams",
-      "reason": "Sports Event",
-      "time": "1:00 PM - 3:00 PM",
-      "site": "Elemore Hall"
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _offsiteFuture = _fetchOffsiteStudents();
+  }
+
+  String _siteNameFromId(dynamic siteCombinationId) {
+    switch (siteCombinationId) {
+      case 1:
+        return 'Elemore Hall';
+      case 2:
+        return 'Windlestone';
+      case 3:
+        return 'PACC';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String _timeLabel(bool amPresent, bool pmPresent) {
+    if (amPresent && pmPresent) return 'Morning & Afternoon';
+    if (amPresent) return 'Morning';
+    if (pmPresent) return 'Afternoon';
+    return 'Not marked';
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchOffsiteStudents() async {
+    try {
+      final attendanceResponse = await http.get(
+        Uri.parse('${AppConfig.apiUrl}/api/attendance/'),
+      );
+      final studentsResponse = await http.get(
+        Uri.parse('${AppConfig.apiUrl}/api/students/'),
+      );
+      final registersResponse = await http.get(
+        Uri.parse('${AppConfig.apiUrl}/api/registers/'),
+      );
+
+      if (attendanceResponse.statusCode != 200 ||
+          studentsResponse.statusCode != 200 ||
+          registersResponse.statusCode != 200) {
+        throw Exception('Failed to load offsite analytics data');
+      }
+
+      final attendanceData =
+          jsonDecode(attendanceResponse.body) as List<dynamic>;
+      final studentsData = jsonDecode(studentsResponse.body) as List<dynamic>;
+      final registersData = jsonDecode(registersResponse.body) as List<dynamic>;
+
+      final Map<int, Map<String, dynamic>> studentsById = {
+        for (final student in studentsData)
+          if (student['student_id'] is int)
+            student['student_id'] as int: {
+              'name':
+                  '${(student['first_name'] ?? '').toString()} ${(student['last_name'] ?? '').toString()}'
+                      .trim(),
+              'site': _siteNameFromId(student['site_combination_id']),
+            },
+      };
+
+      final Map<int, String> registerDateById = {
+        for (final register in registersData)
+          if (register['register_id'] is int)
+            register['register_id'] as int: (register['register_date'] ?? '')
+                .toString(),
+      };
+
+      final offsiteStudents = attendanceData
+          .where((item) => item['on_site'] == false)
+          .map((item) {
+            final studentId = item['student_id'];
+            final registerId = item['register_id'];
+            if (studentId is! int || registerId is! int) return null;
+
+            final studentInfo = studentsById[studentId];
+            final studentName =
+                (studentInfo?['name']?.toString().trim().isNotEmpty ?? false)
+                ? studentInfo!['name'].toString()
+                : 'Student $studentId';
+            final site = studentInfo?['site']?.toString() ?? 'Unknown';
+
+            final amPresent = item['am_present'] == true;
+            final pmPresent = item['pm_present'] == true;
+            final note = (item['note'] ?? '').toString().trim();
+
+            return {
+              'name': studentName,
+              'reason': note.isEmpty ? 'No note provided' : note,
+              'time': _timeLabel(amPresent, pmPresent),
+              'site': site,
+              'date': registerDateById[registerId] ?? 'Unknown date',
+            };
+          })
+          .whereType<Map<String, dynamic>>()
+          .toList();
+
+      offsiteStudents.sort(
+        (a, b) => b['date'].toString().compareTo(a['date'].toString()),
+      );
+
+      return offsiteStudents;
+    } catch (e) {
+      log('Error fetching offsite students: $e');
+      rethrow;
+    }
+  }
+
+  void _refresh() {
+    setState(() {
+      _offsiteFuture = _fetchOffsiteStudents();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-
-    // Filter by selected site
-    final filteredStudents = _selectedSite == null
-        ? students
-        : students.where((s) => s["site"] == _selectedSite).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F9),
       appBar: AppBar(
-        title: const Text("Offsite Students"),
+        title: const Text('Offsite Students'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
         centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _offsiteFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // 🔹 DROPDOWN
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.blueGrey[200]!, width: 1.2),
-                borderRadius: BorderRadius.circular(10),
-                color: Colors.white,
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Error loading offsite students: ${snapshot.error}',
+                ),
               ),
-              child: DropdownButton<String>(
-                value: _selectedSite,
-                hint: Text(
-                  'Filter by Site',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.blueGrey[600],
+            );
+          }
+
+          final students = snapshot.data ?? [];
+          final filteredStudents = _selectedSite == null
+              ? students
+              : students.where((s) => s['site'] == _selectedSite).toList();
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.blueGrey[200]!,
+                      width: 1.2,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.white,
+                  ),
+                  child: DropdownButton<String>(
+                    value: _selectedSite,
+                    hint: Text(
+                      'Filter by Site',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.blueGrey[600],
+                      ),
+                    ),
+                    underline: const SizedBox(),
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Elemore Hall',
+                        child: Text('Elemore Hall'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Windlestone',
+                        child: Text('Windlestone'),
+                      ),
+                      DropdownMenuItem(value: 'PACC', child: Text('PACC')),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedSite = value;
+                      });
+                    },
                   ),
                 ),
-                underline: const SizedBox(),
-                isExpanded: true,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'Elemore Hall',
-                    child: Text('Elemore Hall'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Windlestone',
-                    child: Text('Windlestone'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'PACC',
-                    child: Text('PACC'),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedSite = value;
-                  });
-                },
-              ),
-            ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: filteredStudents.isEmpty
+                      ? const Center(child: Text('No offsite students found'))
+                      : ListView.separated(
+                          itemCount: filteredStudents.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final student = filteredStudents[index];
 
-            const SizedBox(height: 16),
-
-            // 🔹 STUDENT LIST
-            Expanded(
-              child: ListView.separated(
-                itemCount: filteredStudents.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final student = filteredStudents[index];
-
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        )
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 24,
-                          backgroundColor: Colors.blue,
-                          child: Icon(
-                            Icons.person,
-                            color: Colors.white,
-                          ),
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  const CircleAvatar(
+                                    radius: 24,
+                                    backgroundColor: Colors.blue,
+                                    child: Icon(
+                                      Icons.person,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          student['name'].toString(),
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          student['reason'].toString(),
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${student['time']} • ${student['date']} • ${student['site']}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.blueGrey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                student["name"]!,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                student["reason"]!,
-                                style: const TextStyle(
-                                  color: Colors.black54,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                student["time"]!,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.blueGrey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

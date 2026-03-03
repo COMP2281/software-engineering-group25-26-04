@@ -12,6 +12,7 @@
 
 import asyncio
 from datetime import date, datetime, timedelta
+import random
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy import select
 from app.database import Base
@@ -20,8 +21,6 @@ from app.models import (
     Site, AccessLevel, Staff, User, Student, Class, ClassStudent,
     Register, Attendance, Incident, StaffIncident, StudentIncident
 )
-import secrets
-import string
 
 
 async def seed_database():
@@ -96,6 +95,10 @@ async def seed_database():
                 first_name="Emma", last_name="Brown",
                 email="emma.brown@school.edu", role="Staff"
             ),
+            Staff(
+                first_name="Test", last_name="QuickLogin",
+                email="", role="Staff"
+            ),
         ]
         session.add_all(staff_members)
         await session.flush()
@@ -112,6 +115,7 @@ async def seed_database():
             User(staff_id=staff_members[2].staff_id, password="teacher123"),  # Carol
             User(staff_id=staff_members[3].staff_id, password="teacher123"),  # David
             User(staff_id=staff_members[4].staff_id, password="staff123"),  # Emma
+            User(staff_id=staff_members[5].staff_id, password=""),  # Blank test login
         ]
         session.add_all(users)
         await session.flush()
@@ -162,6 +166,29 @@ async def seed_database():
                 site_combination_id=2
             ),
         ]
+
+        random_first_names = [
+            "Amelia", "Ava", "Benjamin", "Caleb", "Chloe", "Daniel", "Elijah",
+            "Ella", "Freya", "Grace", "Hannah", "Harper", "Henry", "Jack",
+            "Jacob", "Leo", "Lily", "Logan", "Lucas", "Maya", "Oscar",
+            "Ruby", "Samuel", "Sienna", "Theo", "William", "Zara"
+        ]
+        random_last_names = [
+            "Adams", "Bailey", "Baker", "Collins", "Cooper", "Edwards", "Evans",
+            "Fisher", "Foster", "Green", "Hall", "Hughes", "King", "Lee",
+            "Morgan", "Morris", "Parker", "Reed", "Scott", "Turner", "Ward",
+            "Wood", "Young"
+        ]
+
+        for _ in range(40):
+            students.append(
+                Student(
+                    first_name=random.choice(random_first_names),
+                    last_name=random.choice(random_last_names),
+                    site_combination_id=random.choice([1, 2, 3]),
+                )
+            )
+
         session.add_all(students)
         await session.flush()
         
@@ -185,6 +212,32 @@ async def seed_database():
             Class(class_name="PACC - Drama 11F", staff_id=staff_members[2].staff_id, site_combination_id=3),
             Class(class_name="PACC - Music 9G", staff_id=staff_members[3].staff_id, site_combination_id=3),
         ]
+
+        subject_pool = [
+            "Maths", "English", "Science", "History", "Geography", "Computing",
+            "Design", "Food Tech", "PSHE", "Music", "Drama", "Art"
+        ]
+        site_labels = {
+            1: "Elemore",
+            2: "Windlestone",
+            3: "PACC",
+        }
+        teacher_ids = [
+            staff_members[1].staff_id,
+            staff_members[2].staff_id,
+            staff_members[3].staff_id,
+        ]
+
+        for site_id in [1, 2, 3]:
+            for group in range(4):
+                classes.append(
+                    Class(
+                        class_name=f"{site_labels[site_id]} - {random.choice(subject_pool)} {random.randint(7, 11)}{chr(65 + group)}",
+                        staff_id=random.choice(teacher_ids),
+                        site_combination_id=site_id,
+                    )
+                )
+
         session.add_all(classes)
         await session.flush()
         
@@ -229,6 +282,36 @@ async def seed_database():
             ClassStudent(class_id=classes[8].class_id, student_id=students[7].student_id),
             ClassStudent(class_id=classes[8].class_id, student_id=students[9].student_id),
         ]
+
+        existing_enrollment_pairs = {
+            (enrollment.class_id, enrollment.student_id)
+            for enrollment in enrollments
+        }
+
+        classes_by_site = {
+            1: [cls for cls in classes if cls.site_combination_id == 1],
+            2: [cls for cls in classes if cls.site_combination_id == 2],
+            3: [cls for cls in classes if cls.site_combination_id == 3],
+        }
+
+        for student in students:
+            candidate_classes = classes_by_site.get(student.site_combination_id, [])
+            if not candidate_classes:
+                candidate_classes = classes
+
+            class_count = random.randint(2, min(4, len(candidate_classes)))
+            for selected_class in random.sample(candidate_classes, k=class_count):
+                pair = (selected_class.class_id, student.student_id)
+                if pair in existing_enrollment_pairs:
+                    continue
+                enrollments.append(
+                    ClassStudent(
+                        class_id=selected_class.class_id,
+                        student_id=student.student_id,
+                    )
+                )
+                existing_enrollment_pairs.add(pair)
+
         session.add_all(enrollments)
         await session.flush()
         
@@ -254,6 +337,7 @@ async def seed_database():
         # 9. ATTENDANCE RECORDS
         # =============================================================================
         print("  ✓ Recording attendance...")
+        attendance_records_count = 0
         for register in registers:
             # Get all students in this class (async-friendly query)
             result = await session.execute(
@@ -263,11 +347,24 @@ async def seed_database():
 
             for cs in class_students:
                 # Randomly mark students as present/absent by session
-                import random
                 am_present = random.choices([True, False], weights=[0.9, 0.1])[0]
                 pm_present = random.choices([True, False], weights=[0.9, 0.1])[0]
                 on_site = am_present or pm_present
-                note = "Sick leave" if not am_present and not pm_present else None
+                if not on_site:
+                    note = random.choice([
+                        "Sick leave",
+                        "Medical appointment",
+                        "Family appointment",
+                        "Transport issue",
+                    ])
+                elif random.random() < 0.06:
+                    note = random.choice([
+                        "Arrived late AM",
+                        "Left early PM",
+                        "Temporary offsite visit",
+                    ])
+                else:
+                    note = None
                 
                 attendance = Attendance(
                     register_id=register.register_id,
@@ -278,6 +375,7 @@ async def seed_database():
                     note=note
                 )
                 session.add(attendance)
+                attendance_records_count += 1
         
         await session.flush()
         
@@ -371,6 +469,50 @@ async def seed_database():
                 outcome="Stand repaired - incident logged for records"
             ),
         ]
+
+        random_actions = [
+            "Late arrival to lesson",
+            "Refused to engage in activity",
+            "Minor disruption during class",
+            "Positive contribution in group task",
+            "Peer conflict resolved by staff",
+            "Forgot required classroom equipment",
+            "Temporary offsite movement",
+            "Low-level defiance to instruction",
+        ]
+        random_outcomes = [
+            "Resolved",
+            "Pending",
+            "Monitored",
+            "Follow-up required",
+            "Resolved with parent contact",
+        ]
+
+        for _ in range(28):
+            selected_class = random.choice(classes)
+            incident_date = today - timedelta(days=random.randint(0, 20))
+            incidents.append(
+                Incident(
+                    duty_coordinator_id=random.choice(staff_members[:4]).staff_id,
+                    incident_date=incident_date,
+                    class_id=selected_class.class_id,
+                    action=random.choice(random_actions),
+                    note=random.choice([
+                        "Observed and recorded by duty coordinator",
+                        "Short intervention completed in class",
+                        "Logged for pastoral follow-up",
+                        "No additional concerns at end of lesson",
+                    ]),
+                    action_taken=random.choice([
+                        "Verbal reminder",
+                        "Restorative conversation",
+                        "Parent contacted",
+                        "Referred to pastoral team",
+                    ]),
+                    outcome=random.choice(random_outcomes),
+                )
+            )
+
         session.add_all(incidents)
         await session.flush()
         
@@ -383,6 +525,25 @@ async def seed_database():
             StaffIncident(staff_id=staff_members[2].staff_id, incident_id=incidents[1].incident_id),  # Carol
             StaffIncident(staff_id=staff_members[1].staff_id, incident_id=incidents[2].incident_id),
         ]
+
+        existing_staff_incident_pairs = {
+            (item.staff_id, item.incident_id) for item in staff_incidents
+        }
+
+        for incident in incidents[3:]:
+            involved_staff = random.sample(staff_members[1:], k=random.randint(1, 2))
+            for staff_member in involved_staff:
+                pair = (staff_member.staff_id, incident.incident_id)
+                if pair in existing_staff_incident_pairs:
+                    continue
+                staff_incidents.append(
+                    StaffIncident(
+                        staff_id=staff_member.staff_id,
+                        incident_id=incident.incident_id,
+                    )
+                )
+                existing_staff_incident_pairs.add(pair)
+
         session.add_all(staff_incidents)
         await session.flush()
         
@@ -439,6 +600,53 @@ async def seed_database():
                 note="Late homework"
             ),
         ]
+
+        class_students_map = {}
+        for enrollment in enrollments:
+            class_students_map.setdefault(enrollment.class_id, []).append(enrollment.student_id)
+
+        existing_student_incident_pairs = {
+            (item.student_id, item.incident_id) for item in student_incidents
+        }
+
+        for incident in incidents:
+            if incident.class_id is None:
+                continue
+
+            candidate_student_ids = class_students_map.get(incident.class_id, [])
+            if not candidate_student_ids:
+                continue
+
+            link_count = random.randint(1, min(3, len(candidate_student_ids)))
+            linked_students = random.sample(candidate_student_ids, k=link_count)
+
+            for student_id in linked_students:
+                pair = (student_id, incident.incident_id)
+                if pair in existing_student_incident_pairs:
+                    continue
+
+                incident_time = datetime.combine(
+                    incident.incident_date,
+                    datetime.min.time(),
+                ) + timedelta(hours=random.randint(8, 15), minutes=random.choice([0, 10, 20, 30, 40, 50]))
+
+                student_incidents.append(
+                    StudentIncident(
+                        student_id=student_id,
+                        incident_id=incident.incident_id,
+                        time=incident_time,
+                        returned=random.choice([True, True, True, False]),
+                        duration_minutes=random.choice([0, 5, 10, 15, 20, 30]),
+                        note=random.choice([
+                            "Discussed with staff",
+                            "Short break then returned",
+                            "Pastoral support requested",
+                            "No further action required",
+                        ]),
+                    )
+                )
+                existing_student_incident_pairs.add(pair)
+
         session.add_all(student_incidents)
         await session.flush()
         
@@ -453,13 +661,18 @@ async def seed_database():
         print(f"   • {len(users)} user accounts")
         print(f"   • {len(students)} students")
         print(f"   • {len(classes)} classes")
+        print(f"   • {len(enrollments)} class enrollments")
         print(f"   • {len(registers)} attendance registers")
+        print(f"   • {attendance_records_count} attendance rows")
         print(f"   • {len(incidents)} incidents")
+        print(f"   • {len(staff_incidents)} staff-incident links")
+        print(f"   • {len(student_incidents)} student-incident links")
         print(f"\n📝 Test Accounts:")
         print(f"   Admin: alice.johnson@school.edu / admin123")
         print(f"   Teacher: bob.smith@school.edu / teacher123")
         print(f"   Teacher: carol.davis@school.edu / teacher123")
         print(f"   Staff: emma.brown@school.edu / staff123")
+        print(f"   Quick test: [blank email] / [blank password]")
     
     await engine.dispose()
 

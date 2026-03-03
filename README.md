@@ -22,6 +22,53 @@ cd software-engineering-group25-26-04
 
 ---
 
+## 🔗 Run Backend + Database + Frontend (Connected)
+
+Use two terminals so both services run at the same time.
+
+### Terminal 1 — Backend (with venv)
+
+```bash
+cd backend
+
+# Mac/Linux
+source venv/bin/activate
+
+# Windows
+# venv\Scripts\activate
+
+# (Optional) reset + populate local SQLite database with test data
+python seed_database.py
+
+# Start API server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Terminal 2 — Frontend (Flutter)
+
+```bash
+cd frontend
+flutter pub get
+flutter run -d chrome
+```
+
+### Verify they are connected
+
+1. Open API docs at `http://localhost:8000/docs`
+2. Open the app and log in
+3. Dashboard should load classes/incidents from the backend API
+
+### Quick testing account
+
+If you seeded with `python seed_database.py`, a quick test account exists with:
+
+- Email: *(blank)*
+- Password: *(blank)*
+
+Leave both fields empty and press **Sign In**.
+
+---
+
 ## 🔧 Backend Setup (FastAPI)
 
 ### First Time Setup
