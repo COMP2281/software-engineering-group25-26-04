@@ -6,7 +6,11 @@ import 'dart:developer';
 import 'config.dart';
 
 class CreateLogModal extends StatefulWidget {
-  const CreateLogModal({super.key});
+  final Map<String, dynamic>? existingIncident;
+
+  const CreateLogModal({super.key, this.existingIncident});
+
+  bool get isEditing => existingIncident != null;
 
   @override
   State<CreateLogModal> createState() => _CreateLogModalState();
@@ -57,6 +61,30 @@ class _CreateLogModalState extends State<CreateLogModal> {
   void initState() {
     super.initState();
     _dateController.text = DateFormat('dd/MM/yyyy').format(_selectedDate);
+
+    // Pre-fill fields when editing an existing incident
+    final existing = widget.existingIncident;
+    if (existing != null) {
+      _descriptionController.text = (existing['note'] ?? '').toString();
+      _actionsTakenController.text = (existing['action_taken'] ?? '').toString();
+      _outcomeController.text = (existing['outcome'] ?? '').toString();
+      _activityController.text = (existing['other_activity'] ?? '').toString();
+      _coordinatorController.text = (existing['duty_coordinator_id'] ?? '').toString();
+
+      final dateStr = (existing['incident_date'] ?? '').toString();
+      if (dateStr.isNotEmpty) {
+        try {
+          _selectedDate = DateTime.parse(dateStr);
+          _dateController.text = DateFormat('dd/MM/yyyy').format(_selectedDate);
+        } catch (_) {}
+      }
+
+      final action = (existing['action'] ?? '').toString();
+      if (action.startsWith('Author: ')) {
+        _isAuthorSameAsStaff = true;
+        _authorController.text = action.replaceFirst('Author: ', '');
+      }
+    }
   }
 
   @override
@@ -146,10 +174,10 @@ class _CreateLogModalState extends State<CreateLogModal> {
   }
 
   Widget _buildHeader() {
-    return const Center(
+    return Center(
       child: Text(
-        "DUTY COORDINATOR LOG",
-        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+        widget.isEditing ? "EDIT LOG" : "DUTY COORDINATOR LOG",
+        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5),
       ),
     );
   }
@@ -408,8 +436,6 @@ class _CreateLogModalState extends State<CreateLogModal> {
     setState(() => _isLoading = true);
 
     final data = {
-      // In a real app, this should map to the selected staff member's ID.
-      // We hardcode it to 1 since _coordinatorController is just text right now.
       "duty_coordinator_id": 1,
       "incident_date": DateFormat('yyyy-MM-dd').format(_selectedDate),
       "class_id": null,
@@ -421,11 +447,21 @@ class _CreateLogModalState extends State<CreateLogModal> {
     };
 
     try {
-      final response = await http.post(
-        Uri.parse('${AppConfig.apiUrl}/api/incidents/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(data),
-      );
+      final http.Response response;
+      if (widget.isEditing) {
+        final id = widget.existingIncident!['incident_id'];
+        response = await http.put(
+          Uri.parse('${AppConfig.apiUrl}/api/incidents/$id'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(data),
+        );
+      } else {
+        response = await http.post(
+          Uri.parse('${AppConfig.apiUrl}/api/incidents/'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(data),
+        );
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (mounted) {
@@ -465,7 +501,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
             onPressed: _isLoading ? null : _submitLog,
             child: _isLoading 
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text("Save Log Entry", style: TextStyle(fontWeight: FontWeight.bold)),
+                : Text(widget.isEditing ? "Update Log" : "Save Log Entry", style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
