@@ -199,6 +199,7 @@ class IncidentCreate(BaseModel):
     incident_date: Date
     class_id: Optional[int] = None
     other_activity: Optional[str] = None
+    status: Optional[str] = None
     action: Optional[str] = None
     note: Optional[str] = None
     action_taken: Optional[str] = None
@@ -209,6 +210,7 @@ class IncidentUpdate(BaseModel):
     incident_date: Optional[Date] = None
     class_id: Optional[int] = None
     other_activity: Optional[str] = None
+    status: Optional[str] = None
     action: Optional[str] = None
     note: Optional[str] = None
     action_taken: Optional[str] = None
@@ -220,6 +222,7 @@ class IncidentResponse(BaseModel):
     incident_date: Date
     class_id: Optional[int]
     other_activity: Optional[str]
+    status: Optional[str]
     action: Optional[str]
     note: Optional[str]
     action_taken: Optional[str]

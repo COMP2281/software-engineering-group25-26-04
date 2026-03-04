@@ -183,6 +183,7 @@ class Incident(Base):
     incident_date: Mapped[date] = mapped_column(Date)
     class_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("classes.class_id"), nullable=True)
     other_activity: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     action: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     action_taken: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
