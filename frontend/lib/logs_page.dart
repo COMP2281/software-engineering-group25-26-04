@@ -153,17 +153,18 @@ class _LogsPageState extends State<LogsPage> {
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final logItem = logs[index];
-              final action = (logItem['action'] ?? '').toString();
+              final noteForTitle = (logItem['note'] ?? '').toString();
               final otherActivity = (logItem['other_activity'] ?? '').toString();
-              final title = action.isNotEmpty ? action : (otherActivity.isNotEmpty ? otherActivity : 'Incident');
+              final title = noteForTitle.isNotEmpty ? noteForTitle : (otherActivity.isNotEmpty ? otherActivity : 'Incident');
               final dateText = (logItem['incident_date'] ?? '').toString();
-              final outcome = (logItem['outcome'] ?? 'Pending').toString();
+              final outcome = (logItem['outcome'] ?? '').toString();
+              final status = (logItem['status'] ?? 'Pending').toString();
               final note = (logItem['note'] ?? '').toString();
               final incidentId = logItem['incident_id'] as int;
 
-              final statusColor = outcome == 'Resolved'
+              final statusColor = status == 'Complete'
                   ? Colors.green
-                  : outcome == 'Pending'
+                  : status == 'Requires Review'
                   ? Colors.orange
                   : Colors.blueGrey;
 
@@ -207,7 +208,7 @@ class _LogsPageState extends State<LogsPage> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            outcome,
+                            status,
                             style: TextStyle(
                               color: statusColor,
                               fontSize: 13,
@@ -226,6 +227,17 @@ class _LogsPageState extends State<LogsPage> {
                         color: Colors.blueGrey[500],
                       ),
                     ),
+                    // Outcome
+                    if (outcome.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Outcome: $outcome',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.blueGrey[600],
+                        ),
+                      ),
+                    ],
                     // Note
                     if (note.trim().isNotEmpty) ...[
                       const SizedBox(height: 6),

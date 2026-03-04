@@ -431,41 +431,79 @@ class _CreateLogModalState extends State<CreateLogModal> {
             children: [
               ..._staffInvolved.map((staff) => Chip(
                 label: Text(staff),
+                backgroundColor: Colors.blue.shade50,
+                deleteIconColor: Colors.red.shade400,
                 onDeleted: () => setState(() => _staffInvolved.remove(staff)),
               )),
               SizedBox(
                 width: 200,
-                child: Autocomplete<String>(
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.isEmpty) {
-                      return _allStaffNames.where((name) => !_staffInvolved.contains(name));
-                    }
-                    return _allStaffNames.where((name) =>
-                      name.toLowerCase().contains(textEditingValue.text.toLowerCase()) &&
-                      !_staffInvolved.contains(name));
-                  },
-                  onSelected: (String selection) {
-                    setState(() {
-                      _staffInvolved.add(selection);
-                      _staffInputController.clear();
-                    });
-                  },
-                  fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-                    return TextField(
-                      controller: controller,
-                      focusNode: focusNode,
-                      decoration: const InputDecoration(
-                        hintText: "Search staff...",
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
-                      onSubmitted: (val) {
-                        if (_allStaffNames.contains(val)) {
-                          setState(() {
-                            _staffInvolved.add(val);
-                            controller.clear();
-                          });
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Autocomplete<String>(
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        final available = _allStaffNames.where((name) => !_staffInvolved.contains(name));
+                        if (textEditingValue.text.isEmpty) return available;
+                        return available.where((name) =>
+                          name.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                      },
+                      onSelected: (String selection) {
+                        setState(() {
+                          _staffInvolved.add(selection);
+                        });
+                        // Unfocus and clear the field to close dropdown
+                        FocusScope.of(context).unfocus();
+                      },
+                      fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                        // Clear the field if the value matches an already-added staff
+                        if (_staffInvolved.contains(controller.text)) {
+                          controller.clear();
                         }
+                        return TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            hintText: "Search staff...",
+                            border: InputBorder.none,
+                            isDense: true,
+                            prefixIcon: Icon(Icons.search, size: 18, color: Colors.grey.shade500),
+                            prefixIconConstraints: const BoxConstraints(minWidth: 28),
+                          ),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              width: 250,
+                              constraints: const BoxConstraints(maxHeight: 200),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                              ),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (context, index) {
+                                  final option = options.elementAt(index);
+                                  return ListTile(
+                                    dense: true,
+                                    leading: CircleAvatar(
+                                      radius: 14,
+                                      backgroundColor: Colors.blue.shade100,
+                                      child: Icon(Icons.person, size: 16, color: Colors.blue.shade700),
+                                    ),
+                                    title: Text(option, style: const TextStyle(fontSize: 14)),
+                                    onTap: () => onSelected(option),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
                       },
                     );
                   },
@@ -545,8 +583,48 @@ class _CreateLogModalState extends State<CreateLogModal> {
                       return TextField(
                         controller: controller,
                         focusNode: focusNode,
-                        decoration: const InputDecoration(hintText: "Search pupil...", isDense: true),
+                        decoration: InputDecoration(
+                          hintText: "Search pupil...",
+                          isDense: true,
+                          prefixIcon: Icon(Icons.search, size: 16, color: Colors.grey.shade500),
+                          prefixIconConstraints: const BoxConstraints(minWidth: 24),
+                        ),
                         onChanged: (val) => _students[i]['name'] = val,
+                      );
+                    },
+                    optionsViewBuilder: (context, onSelected, options) {
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: 250,
+                            constraints: const BoxConstraints(maxHeight: 200),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.white,
+                            ),
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              itemBuilder: (context, index) {
+                                final option = options.elementAt(index);
+                                return ListTile(
+                                  dense: true,
+                                  leading: CircleAvatar(
+                                    radius: 14,
+                                    backgroundColor: Colors.green.shade100,
+                                    child: Icon(Icons.school, size: 16, color: Colors.green.shade700),
+                                  ),
+                                  title: Text(option, style: const TextStyle(fontSize: 14)),
+                                  onTap: () => onSelected(option),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -603,8 +681,8 @@ class _CreateLogModalState extends State<CreateLogModal> {
                 controller: _authorController,
                 readOnly: _isAuthorSameAsStaff,
                 decoration: const InputDecoration(
-                  labelText: "MIR Author", 
-                  prefixIcon: Icon(Icons.edit),
+                  labelText: "Duty Coordinator", 
+                  prefixIcon: Icon(Icons.badge),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -636,6 +714,58 @@ class _CreateLogModalState extends State<CreateLogModal> {
       return;
     }
 
+    // Ask for log status before submitting
+    final status = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.assignment_turned_in, color: Colors.blue.shade700),
+            const SizedBox(width: 10),
+            const Text('Log Status'),
+          ],
+        ),
+        content: const Text(
+          'Is this log complete or does it require further review?',
+          style: TextStyle(fontSize: 15),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pop(context, 'Requires Review'),
+            icon: const Icon(Icons.rate_review, color: Colors.orange),
+            label: const Text('Requires Review'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.orange.shade800,
+              side: BorderSide(color: Colors.orange.shade400),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, 'Complete'),
+            icon: const Icon(Icons.check_circle),
+            label: const Text('Complete'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // User cancelled
+    if (status == null) return;
+
     setState(() => _isLoading = true);
 
     final data = {
@@ -643,6 +773,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
       "incident_date": DateFormat('yyyy-MM-dd').format(_selectedDate),
       "class_id": null,
       "other_activity": _activityController.text.isNotEmpty ? _activityController.text : _selectedReasons.join(", "),
+      "status": status,
       "action": _isAuthorSameAsStaff ? "Author: ${_authorController.text}" : null,
       "note": _descriptionController.text,
       "action_taken": _actionsTakenController.text,

@@ -247,11 +247,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
           return {
             'incident_id': item['incident_id'],
-            'title': item['action'] ?? item['other_activity'] ?? 'Incident',
+            'title': (item['note'] != null && item['note'].toString().isNotEmpty) ? item['note'] : (item['other_activity'] ?? 'Incident'),
             'date': formattedDate,
             'coordinator': 'Staff',
             'action_taken': item['action_taken'] ?? 'Pending',
             'outcome': item['outcome'],
+            'status': item['status'],
           };
         }).toList();
 
@@ -572,16 +573,16 @@ class _DashboardPageState extends State<DashboardPage> {
                                       const AlwaysScrollableScrollPhysics(),
                                   children: incidents.map((incident) {
                                     final statusColor =
-                                        incident['outcome'] == 'Resolved'
+                                        incident['status'] == 'Complete'
                                         ? Colors.green
-                                        : incident['outcome'] == 'Pending'
+                                        : incident['status'] == 'Requires Review'
                                         ? Colors.orange
-                                        : Colors.red;
+                                        : Colors.blueGrey;
                                     return _buildLogItem(
                                       incident['title'],
                                       incident['date'],
                                       incident['coordinator'],
-                                      incident['outcome'] ?? 'Pending',
+                                      incident['status'] ?? 'Pending',
                                       statusColor,
                                     );
                                   }).toList(),
