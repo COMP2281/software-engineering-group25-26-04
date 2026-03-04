@@ -37,9 +37,9 @@ class _CreateLogModalState extends State<CreateLogModal> {
 
   final List<String> _staffInvolved = [];
   final List<String> _selectedReasons = [];
-  final List<Map<String, String>> _students = [
-    {'name': '', 'time': '', 'returned': '', 'duration': ''}
-  ];
+  final List<Map<String, String>> _students = [];
+  List<String> _allStudentNames = [];
+  List<String> _allStaffNames = [];
 
   final List<String> _incidentOptions = [
     "Anti Social Behaviour to pupils",
@@ -62,14 +62,37 @@ class _CreateLogModalState extends State<CreateLogModal> {
     super.initState();
     _dateController.text = DateFormat('dd/MM/yyyy').format(_selectedDate);
 
+    // Fetch all student names for autocomplete
+    _fetchStudentNames();
+
     // Pre-fill fields when editing an existing incident
     final existing = widget.existingIncident;
     if (existing != null) {
       _descriptionController.text = (existing['note'] ?? '').toString();
       _actionsTakenController.text = (existing['action_taken'] ?? '').toString();
       _outcomeController.text = (existing['outcome'] ?? '').toString();
-      _activityController.text = (existing['other_activity'] ?? '').toString();
       _coordinatorController.text = (existing['duty_coordinator_id'] ?? '').toString();
+
+      // Parse other_activity: could be an activity name, or comma-separated incident types
+      final otherActivity = (existing['other_activity'] ?? '').toString();
+      if (otherActivity.isNotEmpty) {
+        final parts = otherActivity.split(', ');
+        final matchedTypes = <String>[];
+        final nonMatchedParts = <String>[];
+        for (final part in parts) {
+          if (_incidentOptions.contains(part)) {
+            matchedTypes.add(part);
+          } else {
+            nonMatchedParts.add(part);
+          }
+        }
+        if (matchedTypes.isNotEmpty) {
+          _selectedReasons.addAll(matchedTypes);
+        }
+        if (nonMatchedParts.isNotEmpty) {
+          _activityController.text = nonMatchedParts.join(', ');
+        }
+      }
 
       final dateStr = (existing['incident_date'] ?? '').toString();
       if (dateStr.isNotEmpty) {
@@ -84,6 +107,136 @@ class _CreateLogModalState extends State<CreateLogModal> {
         _isAuthorSameAsStaff = true;
         _authorController.text = action.replaceFirst('Author: ', '');
       }
+
+      // Fetch staff and students linked to this incident
+      _loadLinkedData(existing['incident_id']);
+    } else {
+      // New log: start with one empty pupil row
+      _students.add({'name': '', 'time': '', 'returned': '', 'duration': ''});
+    }
+  }
+
+  Future<void> _loadLinkedData(dynamic incidentId) async {
+    if (incidentId == null) return;
+    print('>>> _loadLinkedData called with incidentId: $incidentId');
+
+    try {
+      // Fetch all staff names for lookup
+      final staffResponse = await http.get(
+        Uri.parse('${AppConfig.apiUrl}/api/staff/'),
+      );
+      print('>>> Staff response: ${staffResponse.statusCode}');
+      final Map<int, String> staffNames = {};
+      if (staffResponse.statusCode == 200) {
+        final staffData = jsonDecode(staffResponse.body) as List<dynamic>;
+        for (final s in staffData) {
+          final id = s['staff_id'];
+          if (id is int) {
+            final name = '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim();
+            staffNames[id] = name.isNotEmpty ? name : 'Staff $id';
+          }
+        }
+      }
+      print('>>> Staff names loaded: ${staffNames.length}');
+
+      // Fetch staff involved in this incident
+      final staffIncResponse = await http.get(
+        Uri.parse('${AppConfig.apiUrl}/api/staff-incidents/incident/$incidentId'),
+      );
+      print('>>> Staff-incidents response: ${staffIncResponse.statusCode}, body: ${staffIncResponse.body}');
+      if (staffIncResponse.statusCode == 200) {
+        final staffIncData = jsonDecode(staffIncResponse.body) as List<dynamic>;
+        final names = staffIncData
+            .map((si) => staffNames[si['staff_id']] ?? 'Staff ${si['staff_id']}')
+            .toList();
+        print('>>> Staff involved names: $names');
+        if (names.isNotEmpty && mounted) {
+          setState(() {
+            _staffInvolved.addAll(names);
+            if (_isAuthorSameAsStaff && _staffInvolved.isNotEmpty) {
+              _authorController.text = _staffInvolved.first;
+            }
+          });
+        }
+      }
+
+      // Fetch all student names for lookup
+      final studentsResponse = await http.get(
+        Uri.parse('${AppConfig.apiUrl}/api/students/'),
+      );
+      print('>>> Students response: ${studentsResponse.statusCode}');
+      final Map<int, String> studentNames = {};
+      if (studentsResponse.statusCode == 200) {
+        final studentsData = jsonDecode(studentsResponse.body) as List<dynamic>;
+        for (final s in studentsData) {
+          final id = s['student_id'];
+          if (id is int) {
+            final name = '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim();
+            studentNames[id] = name.isNotEmpty ? name : 'Student $id';
+          }
+        }
+      }
+      print('>>> Student names loaded: ${studentNames.length}');
+
+      // Fetch students involved in this incident
+      final studentIncResponse = await http.get(
+        Uri.parse('${AppConfig.apiUrl}/api/student-incidents/incident/$incidentId'),
+      );
+      print('>>> Student-incidents response: ${studentIncResponse.statusCode}, body: ${studentIncResponse.body}');
+      if (studentIncResponse.statusCode == 200) {
+        final studentIncData = jsonDecode(studentIncResponse.body) as List<dynamic>;
+        print('>>> Student incident data count: ${studentIncData.length}');
+        if (studentIncData.isNotEmpty && mounted) {
+          setState(() {
+            _students.clear();
+            for (final si in studentIncData) {
+              final studentId = si['student_id'];
+              final name = studentNames[studentId] ?? 'Student $studentId';
+              final time = (si['time'] ?? '').toString();
+              final returned = si['returned'] == true ? 'Yes' : 'No';
+              final duration = (si['duration_minutes'] ?? '').toString();
+              _students.add({
+                'name': name,
+                'time': time.isNotEmpty && time != 'null' ? time.split('T').last.substring(0, 5) : '',
+                'returned': returned,
+                'duration': duration != 'null' ? duration : '',
+              });
+            }
+            print('>>> _students after load: $_students');
+          });
+        }
+      }
+    } catch (e) {
+      print('>>> ERROR in _loadLinkedData: $e');
+      log('Error loading linked staff/students: $e');
+    }
+  }
+
+  Future<void> _fetchStudentNames() async {
+    try {
+      final response = await http.get(Uri.parse('${AppConfig.apiUrl}/api/students/'));
+      if (response.statusCode == 200 && mounted) {
+        final data = jsonDecode(response.body) as List<dynamic>;
+        setState(() {
+          _allStudentNames = data.map((s) {
+            return '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim();
+          }).where((name) => name.isNotEmpty).toList()
+            ..sort();
+        });
+      }
+
+      final staffResponse = await http.get(Uri.parse('${AppConfig.apiUrl}/api/staff/'));
+      if (staffResponse.statusCode == 200 && mounted) {
+        final staffData = jsonDecode(staffResponse.body) as List<dynamic>;
+        setState(() {
+          _allStaffNames = staffData.map((s) {
+            return '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim();
+          }).where((name) => name.isNotEmpty).toList()
+            ..sort();
+        });
+      }
+    } catch (e) {
+      log('Error fetching names: $e');
     }
   }
 
@@ -281,21 +434,43 @@ class _CreateLogModalState extends State<CreateLogModal> {
                 onDeleted: () => setState(() => _staffInvolved.remove(staff)),
               )),
               SizedBox(
-                width: 180,
-                child: TextField(
-                  controller: _staffInputController,
-                  decoration: const InputDecoration(
-                    hintText: "Add staff...",
-                    border: InputBorder.none,
-                    isDense: true,
-                  ),
-                  onSubmitted: _addStaffMember,
+                width: 200,
+                child: Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) {
+                      return _allStaffNames.where((name) => !_staffInvolved.contains(name));
+                    }
+                    return _allStaffNames.where((name) =>
+                      name.toLowerCase().contains(textEditingValue.text.toLowerCase()) &&
+                      !_staffInvolved.contains(name));
+                  },
+                  onSelected: (String selection) {
+                    setState(() {
+                      _staffInvolved.add(selection);
+                      _staffInputController.clear();
+                    });
+                  },
+                  fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(
+                        hintText: "Search staff...",
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      onSubmitted: (val) {
+                        if (_allStaffNames.contains(val)) {
+                          setState(() {
+                            _staffInvolved.add(val);
+                            controller.clear();
+                          });
+                        }
+                      },
+                    );
+                  },
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.add_circle, color: Colors.blue),
-                onPressed: () => _addStaffMember(_staffInputController.text),
-              )
             ],
           ),
         ),
@@ -345,41 +520,69 @@ class _CreateLogModalState extends State<CreateLogModal> {
             ),
           ],
         ),
-        Table(
-          columnWidths: const {
-            0: FlexColumnWidth(3),
-            1: FlexColumnWidth(1),
-            2: FlexColumnWidth(1),
-            3: FlexColumnWidth(1),
-            4: IntrinsicColumnWidth()
-          },
-          children: [
-            ..._students.asMap().entries.map((entry) => TableRow(
+        ..._students.asMap().entries.map((entry) {
+          final i = entry.key;
+          final student = entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: TextFormField(decoration: const InputDecoration(hintText: "Name")),
+                Expanded(
+                  flex: 3,
+                  child: Autocomplete<String>(
+                    initialValue: TextEditingValue(text: student['name'] ?? ''),
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      if (textEditingValue.text.isEmpty) {
+                        return _allStudentNames;
+                      }
+                      return _allStudentNames.where((name) =>
+                        name.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                    },
+                    onSelected: (String selection) {
+                      _students[i]['name'] = selection;
+                    },
+                    fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(hintText: "Search pupil...", isDense: true),
+                        onChanged: (val) => _students[i]['name'] = val,
+                      );
+                    },
+                  ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: TextFormField(decoration: const InputDecoration(hintText: "Time")),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: TextEditingController(text: student['time'] ?? ''),
+                    decoration: const InputDecoration(hintText: "Time", isDense: true),
+                    onChanged: (val) => _students[i]['time'] = val,
+                  ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: TextFormField(decoration: const InputDecoration(hintText: "Ret.")),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: TextEditingController(text: student['returned'] ?? ''),
+                    decoration: const InputDecoration(hintText: "Ret.", isDense: true),
+                    onChanged: (val) => _students[i]['returned'] = val,
+                  ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: TextFormField(decoration: const InputDecoration(hintText: "Dur.")),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: TextEditingController(text: student['duration'] ?? ''),
+                    decoration: const InputDecoration(hintText: "Dur.", isDense: true),
+                    onChanged: (val) => _students[i]['duration'] = val,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                  onPressed: () => setState(() => _students.removeAt(entry.key)),
-                )
+                  onPressed: () => setState(() => _students.removeAt(i)),
+                ),
               ],
-            )).toList(),
-          ],
-        ),
+            ),
+          );
+        }).toList(),
       ],
     );
   }
@@ -464,8 +667,24 @@ class _CreateLogModalState extends State<CreateLogModal> {
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        // Get the incident ID (from response for new, from existing for edit)
+        int? incidentId;
+        if (widget.isEditing) {
+          incidentId = widget.existingIncident!['incident_id'] as int;
+        } else {
+          try {
+            final responseData = jsonDecode(response.body);
+            incidentId = responseData['incident_id'] as int?;
+          } catch (_) {}
+        }
+
+        // Sync staff and students if we have an incident ID
+        if (incidentId != null) {
+          await _syncStaffAndStudents(incidentId);
+        }
+
         if (mounted) {
-          Navigator.pop(context, true); // True means success, so dashboard can refresh
+          Navigator.pop(context, true);
         }
       } else {
         if (mounted) {
@@ -481,6 +700,104 @@ class _CreateLogModalState extends State<CreateLogModal> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _syncStaffAndStudents(int incidentId) async {
+    print('>>> _syncStaffAndStudents called for incident $incidentId');
+    print('>>> _staffInvolved: $_staffInvolved');
+    print('>>> _students: $_students');
+    try {
+      // --- Sync Staff ---
+      // Build name→ID lookup
+      final staffResp = await http.get(Uri.parse('${AppConfig.apiUrl}/api/staff/'));
+      final Map<String, int> staffNameToId = {};
+      if (staffResp.statusCode == 200) {
+        for (final s in jsonDecode(staffResp.body) as List<dynamic>) {
+          final name = '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim();
+          if (name.isNotEmpty && s['staff_id'] is int) {
+            staffNameToId[name] = s['staff_id'] as int;
+          }
+        }
+      }
+      print('>>> staffNameToId: $staffNameToId');
+
+      // Delete existing staff-incident links
+      final existingStaffResp = await http.get(
+        Uri.parse('${AppConfig.apiUrl}/api/staff-incidents/incident/$incidentId'),
+      );
+      if (existingStaffResp.statusCode == 200) {
+        for (final si in jsonDecode(existingStaffResp.body) as List<dynamic>) {
+          final delResp = await http.delete(
+            Uri.parse('${AppConfig.apiUrl}/api/staff-incidents/${si['staff_id']}/$incidentId'),
+          );
+          print('>>> Deleted staff link ${si['staff_id']}: ${delResp.statusCode}');
+        }
+      }
+
+      // Create new staff-incident links
+      for (final staffName in _staffInvolved) {
+        final staffId = staffNameToId[staffName];
+        print('>>> Creating staff link: name="$staffName" -> id=$staffId');
+        if (staffId != null) {
+          final createResp = await http.post(
+            Uri.parse('${AppConfig.apiUrl}/api/staff-incidents/'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'staff_id': staffId, 'incident_id': incidentId}),
+          );
+          print('>>> Staff link create response: ${createResp.statusCode} ${createResp.body}');
+        }
+      }
+
+      // --- Sync Students ---
+      // Build name→ID lookup
+      final studentsResp = await http.get(Uri.parse('${AppConfig.apiUrl}/api/students/'));
+      final Map<String, int> studentNameToId = {};
+      if (studentsResp.statusCode == 200) {
+        for (final s in jsonDecode(studentsResp.body) as List<dynamic>) {
+          final name = '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim();
+          if (name.isNotEmpty && s['student_id'] is int) {
+            studentNameToId[name] = s['student_id'] as int;
+          }
+        }
+      }
+      print('>>> studentNameToId keys: ${studentNameToId.keys.toList()}');
+
+      // Delete existing student-incident links
+      final existingStudentResp = await http.get(
+        Uri.parse('${AppConfig.apiUrl}/api/student-incidents/incident/$incidentId'),
+      );
+      if (existingStudentResp.statusCode == 200) {
+        for (final si in jsonDecode(existingStudentResp.body) as List<dynamic>) {
+          final delResp = await http.delete(
+            Uri.parse('${AppConfig.apiUrl}/api/student-incidents/${si['student_id']}/$incidentId'),
+          );
+          print('>>> Deleted student link ${si['student_id']}: ${delResp.statusCode}');
+        }
+      }
+
+      // Create new student-incident links
+      for (final student in _students) {
+        final studentName = (student['name'] ?? '').toString();
+        final studentId = studentNameToId[studentName];
+        print('>>> Creating student link: name="$studentName" -> id=$studentId');
+        if (studentId != null) {
+          final createResp = await http.post(
+            Uri.parse('${AppConfig.apiUrl}/api/student-incidents/'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'student_id': studentId,
+              'incident_id': incidentId,
+            }),
+          );
+          print('>>> Student link create response: ${createResp.statusCode} ${createResp.body}');
+        } else {
+          print('>>> SKIPPED: no matching student_id for name "$studentName"');
+        }
+      }
+    } catch (e) {
+      print('>>> ERROR in _syncStaffAndStudents: $e');
+      log('Error syncing staff/students: $e');
     }
   }
 
