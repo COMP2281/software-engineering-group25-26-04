@@ -14,10 +14,10 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, join
+from sqlalchemy import delete, join, select
 
 from app.database import get_db
-from app.models import Incident, Class
+from app.models import Class, Incident, StaffIncident, StudentIncident
 from app.schemas import IncidentCreate, IncidentUpdate, IncidentResponse, Message
 
 
@@ -105,6 +105,12 @@ async def delete_incident(incident_id: int, db: AsyncSession = Depends(get_db)):
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
     
+    await db.execute(
+        delete(StaffIncident).where(StaffIncident.incident_id == incident_id)
+    )
+    await db.execute(
+        delete(StudentIncident).where(StudentIncident.incident_id == incident_id)
+    )
     await db.delete(incident)
     await db.commit()
     return Message(message="Incident deleted")
@@ -115,7 +121,7 @@ async def delete_incident(incident_id: int, db: AsyncSession = Depends(get_db)):
 # -----------------------------------------------------------------------------
 from fastapi.responses import Response
 from fpdf import FPDF
-from app.models import StaffIncident, StudentIncident, Staff, Student
+from app.models import Staff, Student
 
 class PDF(FPDF):
     def header(self):
