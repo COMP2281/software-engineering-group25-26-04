@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -16,11 +17,19 @@ class OffsiteStudentsPage extends StatefulWidget {
 class _OffsiteStudentsPageState extends State<OffsiteStudentsPage> {
   String? _selectedSite;
   late Future<List<Map<String, dynamic>>> _offsiteFuture;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _offsiteFuture = _fetchOffsiteStudents();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   String _siteNameFromId(dynamic siteCombinationId) {
@@ -140,13 +149,6 @@ class _OffsiteStudentsPageState extends State<OffsiteStudentsPage> {
         foregroundColor: Colors.black,
         elevation: 1,
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: _refresh,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-          ),
-        ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _offsiteFuture,

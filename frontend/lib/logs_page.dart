@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -15,11 +16,19 @@ class LogsPage extends StatefulWidget {
 
 class _LogsPageState extends State<LogsPage> {
   late Future<List<Map<String, dynamic>>> _logsFuture;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _logsFuture = _fetchLogs();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   Future<List<Map<String, dynamic>>> _fetchLogs() async {
@@ -118,13 +127,6 @@ class _LogsPageState extends State<LogsPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
-        actions: [
-          IconButton(
-            onPressed: _refresh,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-          ),
-        ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _logsFuture,

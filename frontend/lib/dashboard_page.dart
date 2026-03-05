@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'logs_page.dart';
@@ -21,6 +22,7 @@ class _DashboardPageState extends State<DashboardPage> {
   late Future<List<Map<String, dynamic>>> _incidentsData;
   String? _selectedSite;
   String? _selectedOffsiteSite;
+  Timer? _pollingTimer;
 
   final List<Map<String, dynamic>> _demoStudents = [
     {'student_id': 9001, 'name': 'Alex Carter'},
@@ -46,6 +48,13 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _classesData = _fetchClasses(_selectedSite);
     _incidentsData = _fetchIncidents();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshData());
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   void _refreshData() {
@@ -322,12 +331,6 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                           ],
                         ),
-                        IconButton(
-                          onPressed: _refreshData,
-                          icon: const Icon(Icons.refresh),
-                          color: Colors.blueGrey[600],
-                          tooltip: 'Refresh data',
-                        ),
                       ],
                     ),
 
@@ -535,12 +538,6 @@ class _DashboardPageState extends State<DashboardPage> {
                                   fontWeight: FontWeight.w600,
                                   color: Colors.blueGrey[800],
                                 ),
-                              ),
-                              IconButton(
-                                onPressed: _refreshData,
-                                icon: const Icon(Icons.refresh),
-                                color: Colors.blueGrey[600],
-                                tooltip: 'Refresh incidents',
                               ),
                             ],
                           ),
