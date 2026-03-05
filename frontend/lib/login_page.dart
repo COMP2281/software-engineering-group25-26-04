@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 
-import 'config.dart';
+import 'auth_service.dart';
 import 'dashboard_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -30,89 +28,38 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _signIn() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    final quickLogin = email.isEmpty && password.isEmpty;
-    final invalidPartialInput =
-        (email.isEmpty && password.isNotEmpty) ||
-        (email.isNotEmpty && password.isEmpty);
 
-    if (invalidPartialInput) {
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Enter both email and password, or leave both blank'),
+          content: Text('Please enter your email and password'),
         ),
       );
       return;
     }
 
-    final lookupEmail = quickLogin ? '' : email.toLowerCase();
-
     setState(() => _isLoading = true);
 
     try {
-      final staffResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/staff/'),
-      );
-
-      if (staffResponse.statusCode != 200) {
-        throw Exception('Failed to validate account');
-      }
-
-      final staffData = jsonDecode(staffResponse.body) as List<dynamic>;
-      Map<String, dynamic>? matchedStaff;
-      for (final staff in staffData) {
-        final staffEmail = (staff['email'] ?? '')
-            .toString()
-            .trim()
-            .toLowerCase();
-        if (staffEmail == lookupEmail) {
-          matchedStaff = Map<String, dynamic>.from(staff);
-          break;
-        }
-      }
-
-      if (matchedStaff == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              quickLogin
-                  ? 'No blank test account found. Run backend seed script.'
-                  : 'No staff account found for that email',
-            ),
-          ),
-        );
-        return;
-      }
-
-      final staffId = matchedStaff['staff_id'];
-      if (staffId is! int) {
-        throw Exception('Invalid staff account data');
-      }
-
-      final userResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/users/$staffId'),
-      );
-
-      if (userResponse.statusCode != 200) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No login user record linked to this staff account'),
-          ),
-        );
-        return;
-      }
+      final success = await AuthService.login(email, password);
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const DashboardPage()),
-      );
+
+      if (success) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const DashboardPage()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid email or password')),
+        );
+      }
     } catch (e) {
       log('Login error: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Sign-in failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sign-in failed: $e')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

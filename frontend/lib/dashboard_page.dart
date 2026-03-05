@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'logs_page.dart';
 import 'log_modal.dart';
 import 'analytics_page.dart';
+import 'api_client.dart';
+import 'auth_service.dart';
 import 'config.dart';
 import 'class_register_page.dart';
 import 'login_page.dart';
@@ -91,8 +92,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<List<Map<String, dynamic>>> _fetchStudentsForClass(int classId) async {
     try {
-      final classStudentsResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/class-students/class/$classId/'),
+      final classStudentsResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/class-students/class/$classId/',
       );
 
       if (classStudentsResponse.statusCode != 200) {
@@ -105,8 +106,8 @@ class _DashboardPageState extends State<DashboardPage> {
         return [];
       }
 
-      final studentsResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/students/'),
+      final studentsResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/students/',
       );
 
       final Map<int, String> namesByStudentId = {};
@@ -182,7 +183,7 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       }
 
-      final response = await http.get(Uri.parse(url));
+      final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
         List<dynamic> jsonData = jsonDecode(response.body);
@@ -194,10 +195,8 @@ class _DashboardPageState extends State<DashboardPage> {
           // Fetch student count for this class
           int studentCount = 0;
           try {
-            final studentsResponse = await http.get(
-              Uri.parse(
-                '${AppConfig.apiUrl}/api/class-students/class/${item['class_id']}/',
-              ),
+            final studentsResponse = await ApiClient.get(
+              '${AppConfig.apiUrl}/api/class-students/class/${item['class_id']}/',
             );
 
             if (studentsResponse.statusCode == 200) {
@@ -244,7 +243,7 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       }
 
-      final response = await http.get(Uri.parse(url));
+      final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
         List<dynamic> jsonData = jsonDecode(response.body);
@@ -541,12 +540,16 @@ class _DashboardPageState extends State<DashboardPage> {
                                 ),
                               ),
                               GestureDetector(
-                                onTap: () {
-                                  Navigator.of(context).pushReplacement(
-                                    MaterialPageRoute(
-                                      builder: (context) => const LoginPage(),
-                                    ),
-                                  );
+                                onTap: () async {
+                                  await AuthService.logout();
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (context) => const LoginPage(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  }
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(

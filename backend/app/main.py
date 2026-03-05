@@ -5,12 +5,13 @@
 # =============================================================================
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import create_tables
-from app.routes import all_routers
+from app.routes import auth_router, protected_routers
+from app.utils.auth import get_current_user
 
 
 # -----------------------------------------------------------------------------
@@ -22,9 +23,9 @@ async def lifespan(app: FastAPI):
     print("🚀 Starting up...")
     await create_tables()
     print("✅ Database ready!")
-    
+
     yield  # App runs here
-    
+
     # Shutdown
     print("👋 Shutting down...")
 
@@ -53,8 +54,12 @@ app.add_middleware(
 # -----------------------------------------------------------------------------
 # REGISTER ROUTES
 # -----------------------------------------------------------------------------
-for router in all_routers:
-    app.include_router(router)
+# Public: login endpoint only — no authentication required
+app.include_router(auth_router)
+
+# Protected: every endpoint in these routers requires a valid JWT
+for router in protected_routers:
+    app.include_router(router, dependencies=[Depends(get_current_user)])
 
 
 # -----------------------------------------------------------------------------
@@ -68,10 +73,10 @@ async def root():
 # =============================================================================
 # HOW TO RUN
 # =============================================================================
-# 
+#
 # Development:
 #   uvicorn app.main:app --reload
-# 
+#
 # Then open: http://localhost:8000/docs
-# 
+#
 # =============================================================================
