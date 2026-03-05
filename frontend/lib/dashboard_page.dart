@@ -9,6 +9,7 @@ import 'log_modal.dart';
 import 'analytics_page.dart';
 import 'config.dart';
 import 'class_register_page.dart';
+import 'login_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -537,6 +538,48 @@ class _DashboardPageState extends State<DashboardPage> {
                                   fontSize: 24,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.blueGrey[800],
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (context) => const LoginPage(),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[50],
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.red.shade200,
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.logout,
+                                        size: 15,
+                                        color: Colors.red[600],
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Logout',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.red[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
