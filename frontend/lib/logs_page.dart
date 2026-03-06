@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
+import 'api_client.dart';
 import 'config.dart';
 import 'log_modal.dart';
 
@@ -33,8 +33,8 @@ class _LogsPageState extends State<LogsPage> {
 
   Future<List<Map<String, dynamic>>> _fetchLogs() async {
     try {
-      final response = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/incidents/'),
+      final response = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/incidents/',
       );
       if (response.statusCode != 200) {
         throw Exception('Failed to fetch incidents');
@@ -80,8 +80,9 @@ class _LogsPageState extends State<LogsPage> {
     if (confirmed != true) return;
 
     try {
-      final response = await http.delete(
-        Uri.parse('${AppConfig.apiUrl}/api/incidents/$incidentId'),
+      final response = await ApiClient.delete(
+        '${AppConfig.apiUrl}/api/incidents/$incidentId',
+        context: context,
       );
 
       if (response.statusCode == 200) {

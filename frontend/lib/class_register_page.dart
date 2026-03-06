@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
+import 'api_client.dart';
 import 'config.dart';
 
 class ClassRegisterPage extends StatefulWidget {
@@ -67,8 +67,8 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
     if (classId == null || classId <= 0) return null;
 
     try {
-      final response = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/registers/class/$classId'),
+      final response = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/registers/class/$classId',
       );
 
       if (response.statusCode != 200) {
@@ -96,13 +96,13 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
     if (classId == null || classId <= 0) return null;
 
     try {
-      final response = await http.post(
-        Uri.parse('${AppConfig.apiUrl}/api/registers/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.post(
+        '${AppConfig.apiUrl}/api/registers/',
+        body: {
           'register_date': _formatDate(_selectedDate),
           'class_id': classId,
-        }),
+        },
+        context: context,
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -142,8 +142,8 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
         return;
       }
 
-      final attendanceResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/attendance/register/$registerId'),
+      final attendanceResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/attendance/register/$registerId',
       );
 
       if (attendanceResponse.statusCode != 200) {
@@ -211,8 +211,9 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
         throw Exception('Unable to create/find register for today');
       }
 
-      final existingResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/attendance/register/$registerId'),
+      final existingResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/attendance/register/$registerId',
+        context: context,
       );
 
       final Set<int> existingStudentIds = {};
@@ -239,21 +240,19 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
 
         final hasRecord = existingStudentIds.contains(student.studentId);
         final response = hasRecord
-            ? await http.put(
-                Uri.parse(
-                  '${AppConfig.apiUrl}/api/attendance/$registerId/${student.studentId}',
-                ),
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode(payload),
+            ? await ApiClient.put(
+                '${AppConfig.apiUrl}/api/attendance/$registerId/${student.studentId}',
+                body: payload,
+                context: context,
               )
-            : await http.post(
-                Uri.parse('${AppConfig.apiUrl}/api/attendance/'),
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode({
+            : await ApiClient.post(
+                '${AppConfig.apiUrl}/api/attendance/',
+                body: {
                   'register_id': registerId,
                   'student_id': student.studentId,
                   ...payload,
-                }),
+                },
+                context: context,
               );
 
         if (response.statusCode != 200 && response.statusCode != 201) {

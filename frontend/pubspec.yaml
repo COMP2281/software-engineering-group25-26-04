@@ -38,6 +38,7 @@ dependencies:
   fl_chart: ^0.66.0
   http: ^1.1.0
   intl: ^0.18.0
+  flutter_secure_storage: ^9.2.2
 
 dev_dependencies:
   flutter_test:

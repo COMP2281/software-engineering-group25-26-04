@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
+import 'api_client.dart';
 import 'config.dart';
 
 class OffsiteStudentsPage extends StatefulWidget {
@@ -54,14 +54,14 @@ class _OffsiteStudentsPageState extends State<OffsiteStudentsPage> {
 
   Future<List<Map<String, dynamic>>> _fetchOffsiteStudents() async {
     try {
-      final attendanceResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/attendance/'),
+      final attendanceResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/attendance/',
       );
-      final studentsResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/students/'),
+      final studentsResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/students/',
       );
-      final registersResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/registers/'),
+      final registersResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/registers/',
       );
 
       if (attendanceResponse.statusCode != 200 ||

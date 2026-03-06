@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:developer';
+import 'api_client.dart';
 import 'config.dart';
 
 class CreateLogModal extends StatefulWidget {
@@ -122,8 +123,8 @@ class _CreateLogModalState extends State<CreateLogModal> {
 
     try {
       // Fetch all staff names for lookup
-      final staffResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/staff/'),
+      final staffResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/staff/',
       );
       print('>>> Staff response: ${staffResponse.statusCode}');
       final Map<int, String> staffNames = {};
@@ -140,8 +141,8 @@ class _CreateLogModalState extends State<CreateLogModal> {
       print('>>> Staff names loaded: ${staffNames.length}');
 
       // Fetch staff involved in this incident
-      final staffIncResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/staff-incidents/incident/$incidentId'),
+      final staffIncResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/staff-incidents/incident/$incidentId',
       );
       print('>>> Staff-incidents response: ${staffIncResponse.statusCode}, body: ${staffIncResponse.body}');
       if (staffIncResponse.statusCode == 200) {
@@ -161,8 +162,8 @@ class _CreateLogModalState extends State<CreateLogModal> {
       }
 
       // Fetch all student names for lookup
-      final studentsResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/students/'),
+      final studentsResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/students/',
       );
       print('>>> Students response: ${studentsResponse.statusCode}');
       final Map<int, String> studentNames = {};
@@ -179,8 +180,8 @@ class _CreateLogModalState extends State<CreateLogModal> {
       print('>>> Student names loaded: ${studentNames.length}');
 
       // Fetch students involved in this incident
-      final studentIncResponse = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/student-incidents/incident/$incidentId'),
+      final studentIncResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/student-incidents/incident/$incidentId',
       );
       print('>>> Student-incidents response: ${studentIncResponse.statusCode}, body: ${studentIncResponse.body}');
       if (studentIncResponse.statusCode == 200) {
@@ -214,7 +215,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
 
   Future<void> _fetchStudentNames() async {
     try {
-      final response = await http.get(Uri.parse('${AppConfig.apiUrl}/api/students/'));
+      final response = await ApiClient.get('${AppConfig.apiUrl}/api/students/');
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body) as List<dynamic>;
         setState(() {
@@ -225,7 +226,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
         });
       }
 
-      final staffResponse = await http.get(Uri.parse('${AppConfig.apiUrl}/api/staff/'));
+      final staffResponse = await ApiClient.get('${AppConfig.apiUrl}/api/staff/');
       if (staffResponse.statusCode == 200 && mounted) {
         final staffData = jsonDecode(staffResponse.body) as List<dynamic>;
         setState(() {
@@ -784,16 +785,16 @@ class _CreateLogModalState extends State<CreateLogModal> {
       final http.Response response;
       if (widget.isEditing) {
         final id = widget.existingIncident!['incident_id'];
-        response = await http.put(
-          Uri.parse('${AppConfig.apiUrl}/api/incidents/$id'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data),
+        response = await ApiClient.put(
+          '${AppConfig.apiUrl}/api/incidents/$id',
+          body: data,
+          context: context,
         );
       } else {
-        response = await http.post(
-          Uri.parse('${AppConfig.apiUrl}/api/incidents/'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data),
+        response = await ApiClient.post(
+          '${AppConfig.apiUrl}/api/incidents/',
+          body: data,
+          context: context,
         );
       }
 
@@ -841,7 +842,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
     try {
       // --- Sync Staff ---
       // Build name→ID lookup
-      final staffResp = await http.get(Uri.parse('${AppConfig.apiUrl}/api/staff/'));
+      final staffResp = await ApiClient.get('${AppConfig.apiUrl}/api/staff/', context: context);
       final Map<String, int> staffNameToId = {};
       if (staffResp.statusCode == 200) {
         for (final s in jsonDecode(staffResp.body) as List<dynamic>) {
@@ -854,13 +855,15 @@ class _CreateLogModalState extends State<CreateLogModal> {
       print('>>> staffNameToId: $staffNameToId');
 
       // Delete existing staff-incident links
-      final existingStaffResp = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/staff-incidents/incident/$incidentId'),
+      final existingStaffResp = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/staff-incidents/incident/$incidentId',
+        context: context,
       );
       if (existingStaffResp.statusCode == 200) {
         for (final si in jsonDecode(existingStaffResp.body) as List<dynamic>) {
-          final delResp = await http.delete(
-            Uri.parse('${AppConfig.apiUrl}/api/staff-incidents/${si['staff_id']}/$incidentId'),
+          final delResp = await ApiClient.delete(
+            '${AppConfig.apiUrl}/api/staff-incidents/${si['staff_id']}/$incidentId',
+            context: context,
           );
           print('>>> Deleted staff link ${si['staff_id']}: ${delResp.statusCode}');
         }
@@ -871,10 +874,10 @@ class _CreateLogModalState extends State<CreateLogModal> {
         final staffId = staffNameToId[staffName];
         print('>>> Creating staff link: name="$staffName" -> id=$staffId');
         if (staffId != null) {
-          final createResp = await http.post(
-            Uri.parse('${AppConfig.apiUrl}/api/staff-incidents/'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'staff_id': staffId, 'incident_id': incidentId}),
+          final createResp = await ApiClient.post(
+            '${AppConfig.apiUrl}/api/staff-incidents/',
+            body: {'staff_id': staffId, 'incident_id': incidentId},
+            context: context,
           );
           print('>>> Staff link create response: ${createResp.statusCode} ${createResp.body}');
         }
@@ -882,7 +885,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
 
       // --- Sync Students ---
       // Build name→ID lookup
-      final studentsResp = await http.get(Uri.parse('${AppConfig.apiUrl}/api/students/'));
+      final studentsResp = await ApiClient.get('${AppConfig.apiUrl}/api/students/', context: context);
       final Map<String, int> studentNameToId = {};
       if (studentsResp.statusCode == 200) {
         for (final s in jsonDecode(studentsResp.body) as List<dynamic>) {
@@ -895,13 +898,15 @@ class _CreateLogModalState extends State<CreateLogModal> {
       print('>>> studentNameToId keys: ${studentNameToId.keys.toList()}');
 
       // Delete existing student-incident links
-      final existingStudentResp = await http.get(
-        Uri.parse('${AppConfig.apiUrl}/api/student-incidents/incident/$incidentId'),
+      final existingStudentResp = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/student-incidents/incident/$incidentId',
+        context: context,
       );
       if (existingStudentResp.statusCode == 200) {
         for (final si in jsonDecode(existingStudentResp.body) as List<dynamic>) {
-          final delResp = await http.delete(
-            Uri.parse('${AppConfig.apiUrl}/api/student-incidents/${si['student_id']}/$incidentId'),
+          final delResp = await ApiClient.delete(
+            '${AppConfig.apiUrl}/api/student-incidents/${si['student_id']}/$incidentId',
+            context: context,
           );
           print('>>> Deleted student link ${si['student_id']}: ${delResp.statusCode}');
         }
@@ -913,13 +918,13 @@ class _CreateLogModalState extends State<CreateLogModal> {
         final studentId = studentNameToId[studentName];
         print('>>> Creating student link: name="$studentName" -> id=$studentId');
         if (studentId != null) {
-          final createResp = await http.post(
-            Uri.parse('${AppConfig.apiUrl}/api/student-incidents/'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
+          final createResp = await ApiClient.post(
+            '${AppConfig.apiUrl}/api/student-incidents/',
+            body: {
               'student_id': studentId,
               'incident_id': incidentId,
-            }),
+            },
+            context: context,
           );
           print('>>> Student link create response: ${createResp.statusCode} ${createResp.body}');
         } else {
