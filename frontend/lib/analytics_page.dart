@@ -18,6 +18,8 @@ class _OffsiteStudentsPageState extends State<OffsiteStudentsPage> {
   String? _selectedSite;
   late Future<List<Map<String, dynamic>>> _offsiteFuture;
   Timer? _pollingTimer;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -29,8 +31,12 @@ class _OffsiteStudentsPageState extends State<OffsiteStudentsPage> {
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
+
+
+  
 
   String _siteNameFromId(dynamic siteCombinationId) {
     switch (siteCombinationId) {
@@ -169,130 +175,164 @@ class _OffsiteStudentsPageState extends State<OffsiteStudentsPage> {
           }
 
           final students = snapshot.data ?? [];
-          final filteredStudents = _selectedSite == null
-              ? students
-              : students.where((s) => s['site'] == _selectedSite).toList();
+          final filteredStudents = students.where((s) {
+            final matchesSite = _selectedSite == null || s['site'] == _selectedSite;
+            final matchesSearch = _searchQuery.isEmpty ||
+              s['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
+            return matchesSite && matchesSearch;
+          }).toList();
 
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.blueGrey[200]!,
-                      width: 1.2,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    color: Colors.white,
-                  ),
-                  child: DropdownButton<String>(
-                    value: _selectedSite,
-                    hint: Text(
-                      'Filter by Site',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.blueGrey[600],
-                      ),
-                    ),
-                    underline: const SizedBox(),
-                    isExpanded: true,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Elemore Hall',
-                        child: Text('Elemore Hall'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Windlestone',
-                        child: Text('Windlestone'),
-                      ),
-                      DropdownMenuItem(value: 'PACC', child: Text('PACC')),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedSite = value;
-                      });
-                    },
-                  ),
+  children: [
+    // Row with Site Filter and Search Bar
+    Row(
+      children: [
+        // Site Dropdown
+        Expanded(
+          flex: 2,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.blueGrey[200]!, width: 1.2),
+              borderRadius: BorderRadius.circular(10),
+              color: Colors.white,
+            ),
+            child: DropdownButton<String>(
+              value: _selectedSite,
+              hint: Text(
+                'Filter by Site',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.blueGrey[600],
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: filteredStudents.isEmpty
-                      ? const Center(child: Text('No offsite students found'))
-                      : ListView.separated(
-                          itemCount: filteredStudents.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final student = filteredStudents[index];
-
-                            return Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.05),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  const CircleAvatar(
-                                    radius: 24,
-                                    backgroundColor: Colors.blue,
-                                    child: Icon(
-                                      Icons.person,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          student['name'].toString(),
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          student['reason'].toString(),
-                                          style: const TextStyle(
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${student['time']} • ${student['date']} • ${student['site']}',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.blueGrey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+              ),
+              underline: const SizedBox(),
+              isExpanded: true,
+              items: const [
+                DropdownMenuItem(
+                  value: 'Elemore Hall',
+                  child: Text('Elemore Hall'),
+                ),
+                DropdownMenuItem(
+                  value: 'Windlestone',
+                  child: Text('Windlestone'),
+                ),
+                DropdownMenuItem(
+                  value: 'PACC',
+                  child: Text('PACC'),
                 ),
               ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedSite = value;
+                });
+              },
             ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Search Bar
+        Expanded(
+          flex: 3,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.blueGrey[200]!, width: 1.2),
+              borderRadius: BorderRadius.circular(10),
+              color: Colors.white,
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search by student name',
+                border: InputBorder.none,
+                isDense: true,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+          ),
+        ),
+      ],
+    ),
+    const SizedBox(height: 16),
+    // Offsite Students List
+    Expanded(
+      child: filteredStudents.isEmpty
+          ? const Center(child: Text('No offsite students found'))
+          : ListView.separated(
+              itemCount: filteredStudents.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final student = filteredStudents[index];
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Colors.blue,
+                        child: Icon(
+                          Icons.person,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              student['name'].toString(),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              student['reason'].toString(),
+                              style: const TextStyle(
+                                color: Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${student['time']} • ${student['date']} • ${student['site']}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.blueGrey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+    ),
+  ],
+),
           );
         },
       ),
