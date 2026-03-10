@@ -238,7 +238,7 @@ class _OffsiteStudentsPageState extends State<OffsiteStudentsPage> {
         Expanded(
           flex: 3,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.blueGrey[200]!, width: 1.2),
               borderRadius: BorderRadius.circular(10),
@@ -249,7 +249,6 @@ class _OffsiteStudentsPageState extends State<OffsiteStudentsPage> {
               decoration: const InputDecoration(
                 hintText: 'Search by student name',
                 border: InputBorder.none,
-                isDense: true,
               ),
               onChanged: (value) {
                 setState(() {
