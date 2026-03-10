@@ -2,7 +2,9 @@
 # USER ROUTES
 # =============================================================================
 
+import secrets
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -13,6 +15,14 @@ from app.utils.auth import hash_password
 
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
+
+
+# =============================================================================
+# RESET PASSWORD SCHEMA
+# =============================================================================
+class PasswordResetResponse(BaseModel):
+    message: str
+    new_password: str
 
 
 # -----------------------------------------------------------------------------
@@ -59,7 +69,9 @@ async def create_user(data: UserCreate, db: AsyncSession = Depends(get_db)):
 # UPDATE
 # -----------------------------------------------------------------------------
 @router.put("/{user_id}", response_model=UserResponse)
-async def update_user(user_id: int, data: UserUpdate, db: AsyncSession = Depends(get_db)):
+async def update_user(
+    user_id: int, data: UserUpdate, db: AsyncSession = Depends(get_db)
+):
     """Update a user — password is hashed if provided."""
     result = await db.execute(select(User).where(User.staff_id == user_id))
     user = result.scalar_one_or_none()
@@ -94,3 +106,27 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     await db.delete(user)
     await db.commit()
     return Message(message="User deleted")
+
+
+# =============================================================================
+# RESET PASSWORD
+# =============================================================================
+@router.post("/{user_id}/reset-password", response_model=PasswordResetResponse)
+async def reset_password(user_id: int, db: AsyncSession = Depends(get_db)):
+    """Reset user password to a random string"""
+    result = await db.execute(select(User).where(User.staff_id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Generate random password
+    new_password = secrets.token_urlsafe(12)
+    user.password = hash_password(new_password)
+
+    await db.commit()
+    await db.refresh(user)
+
+    return PasswordResetResponse(
+        message="Password reset successfully", new_password=new_password
+    )

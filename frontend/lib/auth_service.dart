@@ -19,10 +19,7 @@ class AuthService {
     final response = await http.post(
       Uri.parse('${AppConfig.apiUrl}/auth/login'),
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {
-        'username': email.toLowerCase().trim(),
-        'password': password,
-      },
+      body: {'username': email.toLowerCase().trim(), 'password': password},
     );
 
     if (response.statusCode == 200) {

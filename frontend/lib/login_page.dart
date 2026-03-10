@@ -32,9 +32,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your email and password'),
-        ),
+        const SnackBar(content: Text('Please enter your email and password')),
       );
       return;
     }
@@ -71,9 +69,9 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       log('Login error: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sign-in failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Sign-in failed: $e')));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

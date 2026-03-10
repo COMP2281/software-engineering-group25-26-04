@@ -56,9 +56,7 @@ async def login(
         raise auth_error
 
     # Step 2 — find the User (credential) record linked to this staff member
-    result = await db.execute(
-        select(User).where(User.staff_id == staff.staff_id)
-    )
+    result = await db.execute(select(User).where(User.staff_id == staff.staff_id))
     user = result.scalar_one_or_none()
     if user is None:
         raise auth_error
