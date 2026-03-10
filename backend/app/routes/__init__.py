@@ -10,6 +10,7 @@ from app.routes.auth import router as auth_router
 from app.routes.access_levels import router as access_levels_router
 from app.routes.sites import router as sites_router
 from app.routes.staff import router as staff_router
+from app.routes.staff_sites import router as staff_sites_router
 from app.routes.students import router as students_router
 from app.routes.users import router as users_router
 from app.routes.classes import router as classes_router
@@ -26,6 +27,7 @@ protected_routers = [
     access_levels_router,
     sites_router,
     staff_router,
+    staff_sites_router,
     students_router,
     users_router,
     classes_router,

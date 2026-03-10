@@ -13,10 +13,11 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, join
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.models import ClassStudent
+from app.models import ClassStudent, Student
 from app.schemas import ClassStudentCreate, ClassStudentResponse, Message
 
 
@@ -41,9 +42,25 @@ async def get_class_students(db: AsyncSession = Depends(get_db)):
 async def get_students_in_class(class_id: int, db: AsyncSession = Depends(get_db)):
     """Get all students enrolled in a specific class"""
     result = await db.execute(
-        select(ClassStudent).where(ClassStudent.class_id == class_id)
+        select(ClassStudent)
+        .where(ClassStudent.class_id == class_id)
+        .options(selectinload(ClassStudent.student))
     )
-    return result.scalars().all()
+    class_students = result.scalars().all()
+
+    # Manually construct response data to include student names
+    response_data = []
+    for cs in class_students:
+        response_data.append(
+            {
+                "class_id": cs.class_id,
+                "student_id": cs.student_id,
+                "first_name": cs.student.first_name,
+                "last_name": cs.student.last_name,
+            }
+        )
+
+    return [ClassStudentResponse(**data) for data in response_data]
 
 
 # -----------------------------------------------------------------------------
@@ -62,22 +79,26 @@ async def get_classes_for_student(student_id: int, db: AsyncSession = Depends(ge
 # CREATE
 # -----------------------------------------------------------------------------
 @router.post("/", response_model=ClassStudentResponse, status_code=201)
-async def create_class_student(data: ClassStudentCreate, db: AsyncSession = Depends(get_db)):
+async def create_class_student(
+    data: ClassStudentCreate, db: AsyncSession = Depends(get_db)
+):
     """Enroll a student in a class"""
     # Check if enrollment already exists
     result = await db.execute(
         select(ClassStudent).where(
             and_(
                 ClassStudent.class_id == data.class_id,
-                ClassStudent.student_id == data.student_id
+                ClassStudent.student_id == data.student_id,
             )
         )
     )
     existing = result.scalar_one_or_none()
-    
+
     if existing:
-        raise HTTPException(status_code=400, detail="Student already enrolled in this class")
-    
+        raise HTTPException(
+            status_code=400, detail="Student already enrolled in this class"
+        )
+
     class_student = ClassStudent(**data.model_dump())
     db.add(class_student)
     await db.commit()
@@ -89,21 +110,22 @@ async def create_class_student(data: ClassStudentCreate, db: AsyncSession = Depe
 # DELETE
 # -----------------------------------------------------------------------------
 @router.delete("/{class_id}/{student_id}", response_model=Message)
-async def delete_class_student(class_id: int, student_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_class_student(
+    class_id: int, student_id: int, db: AsyncSession = Depends(get_db)
+):
     """Remove a student from a class"""
     result = await db.execute(
         select(ClassStudent).where(
             and_(
-                ClassStudent.class_id == class_id,
-                ClassStudent.student_id == student_id
+                ClassStudent.class_id == class_id, ClassStudent.student_id == student_id
             )
         )
     )
     class_student = result.scalar_one_or_none()
-    
+
     if not class_student:
         raise HTTPException(status_code=404, detail="Enrollment not found")
-    
+
     await db.delete(class_student)
     await db.commit()
     return Message(message="Student removed from class")

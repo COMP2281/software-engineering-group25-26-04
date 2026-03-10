@@ -60,12 +60,19 @@ flutter run -d chrome
 
 ### Quick testing account
 
-If you seeded with `python seed_database.py`, a quick test account exists with:
+If you seeded with `python seed_database.py`, test accounts exist:
 
+**Admin Account:**
+- Email: `alice.johnson@school.edu`
+- Password: `admin123`
+- Access: Admin Panel with full management features
+
+**Regular User Account:**
 - Email: *(blank)*
 - Password: *(blank)*
+- Access: Dashboard only
 
-Leave both fields empty and press **Sign In**.
+Leave email/password fields empty and press **Sign In** for the default user.
 
 ---
 
@@ -207,9 +214,14 @@ deactivate
 ├── frontend/                # Flutter Frontend
 │   ├── lib/
 │   │   ├── main.dart        # Flutter app entry point
+│   │   ├── login_page.dart  # Login and authentication
 │   │   ├── dashboard_page.dart
-│   │   ├── logs_page.dart
-│   │   └── analytics_page.dart
+│   │   ├── admin_page.dart  # Admin panel hub
+│   │   ├── admin_user_management_page.dart   # Staff management
+│   │   ├── admin_class_management_page.dart  # Class management
+│   │   ├── admin_import_students_page.dart   # CSV bulk import
+│   │   ├── api_client.dart  # HTTP client
+│   │   └── auth_service.dart # Authentication service
 │   ├── pubspec.yaml         # Flutter dependencies
 │   └── android/, ios/, web/ # Platform-specific code
 │
@@ -236,6 +248,53 @@ deactivate
 1. Make code changes in `lib/`
 2. Press `r` to hot reload
 3. Test on multiple devices if needed
+
+---
+
+## 👨‍💼 Admin Panel Features
+
+Admin users (role: "Admin") have access to a full management interface:
+
+### 1. **Student Bulk Import**
+- Upload CSV files with student data (First Name, Last Name, Class, Site)
+- Preview all rows before import with validation status
+- Auto-creates classes if they don't exist
+- Assigns imported students to their classes
+
+**Test CSV Format:**
+```csv
+First Name,Second Name,Class,Site
+John,Smith,Math 9A,Elemore
+Emma,Johnson,English 10B,Windlestone
+Oliver,Williams,Science 9C,PACC
+```
+
+### 2. **Staff/User Management**
+- View all staff members
+- Create new staff accounts with password assignment
+- Edit staff:
+  - Name and email
+  - Role assignment (Admin, Teacher, Staff)
+  - Site visibility access permissions
+  - Password management
+- Assign sites: Elemore Hall, Windlestone, PACC
+
+### 3. **Class Management**
+- View all classes
+- Create and edit classes:
+  - Class name
+  - Teacher assignment
+  - Site assignment
+  - Manage enrolled students
+- Delete classes
+- View student rosters with names
+
+### Admin Panel Layout
+The admin page displays:
+- **Quick Actions**: Import Students button
+- **Staff Members**: Preview list (first 5) with "View All" link
+- **Classes**: Preview list (first 5) with "View All" link
+- **Dashboard**: Button to access the main user dashboard
 
 ---
 

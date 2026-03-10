@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'admin_page.dart';
 import 'auth_service.dart';
 import 'dashboard_page.dart';
 
@@ -31,9 +32,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your email and password'),
-        ),
+        const SnackBar(content: Text('Please enter your email and password')),
       );
       return;
     }
@@ -46,9 +45,22 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (success) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const DashboardPage()),
-        );
+        // Fetch and store user role
+        await AuthService.updateUserRole();
+        final role = await AuthService.getRole();
+
+        if (!mounted) return;
+
+        // Navigate based on role
+        if (role == 'Admin') {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const AdminPage()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const DashboardPage()),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invalid email or password')),
@@ -57,9 +69,9 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       log('Login error: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sign-in failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Sign-in failed: $e')));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
