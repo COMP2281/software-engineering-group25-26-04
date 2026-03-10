@@ -52,7 +52,7 @@ class _DashboardPageState extends State<DashboardPage> {
     _classesData = _fetchClasses(_selectedSite);
     _incidentsData = _fetchIncidents();
     _offsiteStudentsFuture = _fetchOffsiteStudents();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshData());
+    _pollingTimer = Timer.periodic(const Duration(seconds: 600), (_) => _refreshData());
   }
 
   @override
@@ -149,6 +149,7 @@ class _DashboardPageState extends State<DashboardPage> {
       'color': Colors.teal,
       'is_demo': true,
       'demo_students': _demoStudents,
+      'site_combination_id': 1,
     };
   }
 
@@ -281,6 +282,7 @@ class _DashboardPageState extends State<DashboardPage> {
             'students': studentCount,
             'color': _colors[index % _colors.length],
             'is_demo': false,
+            'site_combination_id': item['site_combination_id'],
           });
         }
 
@@ -611,6 +613,13 @@ String _timeLabel(bool amPresent, bool pmPresent) {
                                         ),
                                       ),
                                       Text(
+                                        _getSiteLabel(cls['site_combination_id']),
+                                        style: TextStyle(
+                                          color: Colors.blueGrey[500],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Text(
                                         "${cls['students']} Students",
                                         style: TextStyle(
                                           color: Colors.blueGrey[500],
@@ -878,7 +887,7 @@ String _timeLabel(bool amPresent, bool pmPresent) {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    "OffSite students",
+                                    "Off-Site students",
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,
@@ -886,52 +895,6 @@ String _timeLabel(bool amPresent, bool pmPresent) {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: Colors.blueGrey[200]!,
-                                        width: 1.2,
-                                      ),
-                                      borderRadius: BorderRadius.circular(10),
-                                      color: Colors.white,
-                                    ),
-                                    child: DropdownButton<String>(
-                                      value: _selectedOffsiteSite,
-                                      hint: Text(
-                                        'Filter by Site',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.blueGrey[600],
-                                        ),
-                                      ),
-                                      underline: const SizedBox(),
-                                      items: const [
-                                        DropdownMenuItem(
-                                          value: 'elemore_hall',
-                                          child: Text('Elemore Hall'),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'windlestone',
-                                          child: Text('Windlestone'),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'pacc',
-                                          child: Text('PACC'),
-                                        ),
-                                      ],
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _selectedOffsiteSite = value;
-                                        });
-                                      },
-                                    ),
-                                  ),
                                 ],
                               ),
 

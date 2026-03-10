@@ -83,11 +83,11 @@ async def seed_database():
         staff_members = [
             Staff(
                 first_name="Alice", last_name="Johnson",
-                email="alice.johnson@school.edu", role="Admin"
+                email="admin", role="Admin"
             ),
             Staff(
                 first_name="Bob", last_name="Smith",
-                email="bob.smith@school.edu", role="Teacher"
+                email="teacher", role="Teacher"
             ),
             Staff(
                 first_name="Carol", last_name="Davis",
@@ -99,7 +99,7 @@ async def seed_database():
             ),
             Staff(
                 first_name="Emma", last_name="Brown",
-                email="emma.brown@school.edu", role="Staff"
+                email="staff", role="Staff"
             ),
         ]
         session.add_all(staff_members)
@@ -113,15 +113,15 @@ async def seed_database():
         # For testing, using simple hashed passwords
         users = [
             User(staff_id=staff_members[0].staff_id, password=hash_password(
-                "admin123")),    # Alice
+                "admin")),    # Alice
             User(staff_id=staff_members[1].staff_id,
-                 password=hash_password("teacher123")),  # Bob
+                 password=hash_password("teacher")),  # Bob
             User(staff_id=staff_members[2].staff_id, password=hash_password(
                 "teacher123")),  # Carol
             User(staff_id=staff_members[3].staff_id, password=hash_password(
                 "teacher123")),  # David
             User(staff_id=staff_members[4].staff_id, password=hash_password(
-                "staff123")),    # Emma
+                "staff")),    # Emma
         ]
         session.add_all(users)
         await session.flush()
@@ -204,27 +204,27 @@ async def seed_database():
         print("  ✓ Creating classes...")
         classes = [
             # Elemore Hall (site_combination_id=1)
-            Class(class_name="Elemore - Mathematics 9A",
+            Class(class_name="Mathematics 9A",
                   staff_id=staff_members[1].staff_id, site_combination_id=1),
-            Class(class_name="Elemore - English 10B",
+            Class(class_name="English 10B",
                   staff_id=staff_members[2].staff_id, site_combination_id=1),
-            Class(class_name="Elemore - Science 9C",
+            Class(class_name="Science 9C",
                   staff_id=staff_members[3].staff_id, site_combination_id=1),
 
             # Windlestone (site_combination_id=2)
-            Class(class_name="Windlestone - Mathematics 10A",
+            Class(class_name="Mathematics 10A",
                   staff_id=staff_members[1].staff_id, site_combination_id=2),
-            Class(class_name="Windlestone - History 11B",
+            Class(class_name="History 11B",
                   staff_id=staff_members[2].staff_id, site_combination_id=2),
-            Class(class_name="Windlestone - PE 9D",
+            Class(class_name="PE 9D",
                   staff_id=staff_members[3].staff_id, site_combination_id=2),
 
             # PACC (site_combination_id=3)
-            Class(class_name="PACC - Art 10E",
+            Class(class_name="Art 10E",
                   staff_id=staff_members[1].staff_id, site_combination_id=3),
-            Class(class_name="PACC - Drama 11F",
+            Class(class_name="Drama 11F",
                   staff_id=staff_members[2].staff_id, site_combination_id=3),
-            Class(class_name="PACC - Music 9G",
+            Class(class_name="Music 9G",
                   staff_id=staff_members[3].staff_id, site_combination_id=3),
         ]
 
@@ -247,7 +247,7 @@ async def seed_database():
             for group in range(4):
                 classes.append(
                     Class(
-                        class_name=f"{site_labels[site_id]} - {random.choice(subject_pool)} {random.randint(7, 11)}{chr(65 + group)}",
+                        class_name=f"{random.choice(subject_pool)} {random.randint(7, 11)}{chr(65 + group)}",
                         staff_id=random.choice(teacher_ids),
                         site_combination_id=site_id,
                     )
@@ -733,10 +733,9 @@ async def seed_database():
         print(f"   • {len(staff_incidents)} staff-incident links")
         print(f"   • {len(student_incidents)} student-incident links")
         print(f"\n📝 Test Accounts:")
-        print(f"   Admin:   alice.johnson@school.edu / admin123")
-        print(f"   Teacher: bob.smith@school.edu / teacher123")
-        print(f"   Teacher: carol.davis@school.edu / teacher123")
-        print(f"   Staff:   emma.brown@school.edu / staff123")
+        print(f"   Admin:   admin / admin")
+        print(f"   Teacher: teacher / teacher")
+        print(f"   Staff:   staff / staff")
 
     await engine.dispose()
 
