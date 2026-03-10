@@ -534,6 +534,51 @@ class _EditStaffDialogState extends State<_EditStaffDialog> {
     }
   }
 
+  // Reserved for a future admin-triggered password reset flow.
+  // ignore: unused_element
+  Future<void> _resetPassword() async {
+    setState(() => isLoading = true);
+
+    try {
+      final response = await ApiClient.post(
+        '${AppConfig.apiUrl}/api/users/${widget.staff['staff_id']}/reset-password',
+        body: {},
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final newPassword = data['new_password'] as String;
+
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Password Reset'),
+            content: Text(
+              'New password: $newPassword\nCopy this password now.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
   String _getSiteName(dynamic site) {
     if (site['site1'] == true) return 'Elemore Hall';
     if (site['site2'] == true) return 'Windlestone';

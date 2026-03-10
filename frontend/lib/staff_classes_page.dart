@@ -36,6 +36,21 @@ class _StaffClassesPageState extends State<StaffClassesPage> {
     super.dispose();
   }
 
+  // Reserved for a future site-filter flow on the staff classes page.
+  // ignore: unused_element
+  int? _getSiteId(String? siteName) {
+    switch (siteName) {
+      case 'elemore_hall':
+        return 1;
+      case 'windlestone':
+        return 2;
+      case 'pacc':
+        return 3;
+      default:
+        return null;
+    }
+  }
+
   String _getSiteLabel(int? siteId) {
     switch (siteId) {
       case 1:
