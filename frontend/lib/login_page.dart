@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'admin_page.dart';
 import 'auth_service.dart';
 import 'dashboard_page.dart';
+import 'staff_classes_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -56,7 +57,12 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const AdminPage()),
           );
+        } else if (role == 'Staff') {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const StaffClassesPage()),
+          );
         } else {
+          // Teacher or other roles
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const DashboardPage()),
           );
