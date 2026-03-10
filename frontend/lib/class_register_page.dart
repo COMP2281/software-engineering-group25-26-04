@@ -553,11 +553,18 @@ class _CompactToggle extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label, style: const TextStyle(fontSize: 12)),
-        Checkbox(
-          value: value,
-          onChanged: (newValue) => onChanged(newValue ?? false),
-          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        const SizedBox(width: 4),
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: Transform.scale(
+            scale: 1.2,
+            child: Checkbox(
+              value: value,
+              onChanged: (newValue) => onChanged(newValue ?? false),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
         ),
       ],
     );
