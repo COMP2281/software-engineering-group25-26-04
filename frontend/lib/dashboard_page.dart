@@ -81,6 +81,66 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  String _getSiteLabel(int? siteId) {
+    switch (siteId) {
+      case 1:
+        return 'Elemore Hall';
+      case 2:
+        return 'Windlestone';
+      case 3:
+        return 'PACC';
+      default:
+        return 'Unknown Site';
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchAllClassesFromDb() async {
+    final response = await ApiClient.get(
+      '${AppConfig.apiUrl}/api/classes/',
+      context: context,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load all classes');
+    }
+
+    final jsonData = jsonDecode(response.body) as List<dynamic>;
+    return jsonData
+        .map(
+          (item) => {
+            'class_id': item['class_id'],
+            'class_name': (item['class_name'] ?? 'Unnamed Class').toString(),
+            'staff_id': item['staff_id'],
+            'site_combination_id': item['site_combination_id'],
+          },
+        )
+        .toList();
+  }
+
+  Future<void> _showAllClassesPopup() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog.fullscreen(
+        child: _AllClassesFullscreenDialog(
+          fetchClasses: _fetchAllClassesFromDb,
+          getSiteLabel: _getSiteLabel,
+          onClassTap: (selectedClass, navigationContext) async {
+            final classData = {
+              'class_id': selectedClass['class_id'],
+              'name': (selectedClass['class_name'] ?? 'Unnamed Class')
+                  .toString(),
+              'is_demo': false,
+            };
+            await _openClassRegister(
+              classData,
+              navigationContext: navigationContext,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Map<String, dynamic> _buildDemoClass() {
     return {
       'class_id': -1,
@@ -145,8 +205,12 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  Future<void> _openClassRegister(Map<String, dynamic> cls) async {
+  Future<void> _openClassRegister(
+    Map<String, dynamic> cls, {
+    BuildContext? navigationContext,
+  }) async {
     final isDemoClass = cls['is_demo'] == true;
+    final targetContext = navigationContext ?? context;
 
     List<Map<String, dynamic>> students;
     if (isDemoClass) {
@@ -161,7 +225,7 @@ class _DashboardPageState extends State<DashboardPage> {
     if (!mounted) return;
 
     Navigator.push(
-      context,
+      targetContext,
       MaterialPageRoute(
         builder: (context) => ClassRegisterPage(
           className: cls['name'].toString(),
@@ -567,7 +631,7 @@ String _timeLabel(bool amPresent, bool pmPresent) {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
-                        onPressed: () {},
+                        onPressed: _showAllClassesPopup,
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           side: BorderSide(color: Colors.blueGrey[200]!),
@@ -1040,4 +1104,240 @@ Expanded(
     ),
   );
 }
+}
+
+class _AllClassesFullscreenDialog extends StatefulWidget {
+  const _AllClassesFullscreenDialog({
+    required this.fetchClasses,
+    required this.getSiteLabel,
+    required this.onClassTap,
+  });
+
+  final Future<List<Map<String, dynamic>>> Function() fetchClasses;
+  final String Function(int? siteId) getSiteLabel;
+  final Future<void> Function(
+    Map<String, dynamic> cls,
+    BuildContext navigationContext,
+  ) onClassTap;
+
+  @override
+  State<_AllClassesFullscreenDialog> createState() =>
+      _AllClassesFullscreenDialogState();
+}
+
+class _AllClassesFullscreenDialogState extends State<_AllClassesFullscreenDialog> {
+  late Future<List<Map<String, dynamic>>> _allClassesFuture;
+  late final TextEditingController _searchController;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _allClassesFuture = widget.fetchClasses();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _refresh() {
+    setState(() {
+      _allClassesFuture = widget.fetchClasses();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F4F6),
+      appBar: AppBar(
+        title: const Text('All Classes'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.blueGrey[900],
+        actions: [
+          IconButton(
+            onPressed: _refresh,
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh),
+          ),
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            tooltip: 'Close',
+            icon: const Icon(Icons.close),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _allClassesFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Could not load classes from the database.'),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: _refresh,
+                      child: const Text('Try Again'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final classes = snapshot.data ?? [];
+            if (classes.isEmpty) {
+              return const Center(child: Text('No classes found in the database.'));
+            }
+
+            final query = _searchQuery.trim().toLowerCase();
+
+final filteredClasses = classes.where((cls) {
+  if (query.isEmpty) return true;
+
+  final className = (cls['class_name'] ?? '').toString().toLowerCase();
+  final classId = (cls['class_id'] ?? '').toString().toLowerCase();
+  final staffId = (cls['staff_id'] ?? '').toString().toLowerCase();
+  final siteId = cls['site_combination_id'];
+  final siteLabel =
+      widget.getSiteLabel(siteId is int ? siteId : null).toLowerCase();
+
+  // Support: "class id 12", "classid 12", "class 12"
+  final classMatch = RegExp(r'^class\s*id?\s*:?\s*(.+)$').firstMatch(query);
+  if (classMatch != null) {
+    final classIdQuery = classMatch.group(1)?.trim() ?? '';
+    if (classIdQuery.isEmpty) return true;
+    return classId.contains(classIdQuery);
+  }
+
+  // Support: "staff id 4", "staffid 4", "staff 4"
+  final staffMatch = RegExp(r'^staff\s*id?\s*:?\s*(.+)$').firstMatch(query);
+  if (staffMatch != null) {
+    final staffIdQuery = staffMatch.group(1)?.trim() ?? '';
+    if (staffIdQuery.isEmpty) return true;
+    return staffId.contains(staffIdQuery);
+  }
+
+  // General search
+  return className.contains(query) ||
+      classId.contains(query) ||
+      staffId.contains(query) ||
+      siteLabel.contains(query);
+}).toList();
+
+            return Column(
+              children: [
+                TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search classes, site, class ID or staff ID',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                            },
+                          ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blueGrey.shade100),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blueGrey.shade100),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: filteredClasses.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No classes match "$_searchQuery"',
+                            style: TextStyle(color: Colors.blueGrey[600]),
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: filteredClasses.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final cls = filteredClasses[index];
+                            final classId = cls['class_id'];
+                            final staffId = cls['staff_id'];
+                            final siteId = cls['site_combination_id'];
+
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => widget.onClassTap(cls, context),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.blueGrey.shade100,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      cls['class_name'].toString(),
+                                      style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text('Class ID: $classId'),
+                                    Text('Teacher (Staff ID): $staffId'),
+                                    Text(
+                                      'Site: ${widget.getSiteLabel(siteId is int ? siteId : null)}',
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Tap to open register',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.blueGrey.shade500,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
 }

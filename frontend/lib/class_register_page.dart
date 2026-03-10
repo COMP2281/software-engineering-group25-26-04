@@ -303,6 +303,15 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.blueGrey[900],
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Homepage',
+            icon: const Icon(Icons.home_outlined),
+            onPressed: () {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
