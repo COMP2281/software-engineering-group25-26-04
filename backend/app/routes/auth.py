@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Staff, User
-from app.utils.auth import create_access_token, verify_password
+from app.utils.auth import create_access_token, verify_password, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -18,6 +18,14 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
+
+
+class CurrentUserResponse(BaseModel):
+    staff_id: int
+    email: str
+    first_name: str
+    last_name: str
+    role: str
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -62,3 +70,17 @@ async def login(
     # Step 4 — issue token with staff_id as the subject claim
     token = create_access_token(data={"sub": str(staff.staff_id)})
     return TokenResponse(access_token=token, token_type="bearer")
+
+
+@router.get("/me", response_model=CurrentUserResponse)
+async def get_current_user_info(
+    staff: Staff = Depends(get_current_user),
+) -> CurrentUserResponse:
+    """Get current authenticated user's information including role."""
+    return CurrentUserResponse(
+        staff_id=staff.staff_id,
+        email=staff.email,
+        first_name=staff.first_name,
+        last_name=staff.last_name,
+        role=staff.role,
+    )
