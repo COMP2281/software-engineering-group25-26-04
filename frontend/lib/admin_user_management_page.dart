@@ -1,10 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import 'api_client.dart';
-import 'auth_service.dart';
 import 'config.dart';
 
 class AdminUserManagementPage extends StatefulWidget {
@@ -33,6 +31,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
         '${AppConfig.apiUrl}/api/staff/',
         context: context,
       );
+      if (!mounted) return;
       final rolesResponse = await ApiClient.get(
         '${AppConfig.apiUrl}/api/access-levels/',
         context: context,
@@ -349,7 +348,7 @@ class _CreateStaffDialogState extends State<_CreateStaffDialog> {
                 },
                 contentPadding: EdgeInsets.zero,
               );
-            }).toList(),
+            }),
             const SizedBox(height: 16),
             DropdownButton<String>(
               isExpanded: true,
@@ -483,6 +482,7 @@ class _EditStaffDialogState extends State<_EditStaffDialog> {
       // Get current sites from the UI state
       final previousSites = <int>{};
       try {
+        if (!mounted) return;
         final response = await ApiClient.get(
           '${AppConfig.apiUrl}/api/staff-sites/staff/$staffId',
           context: context,
@@ -520,49 +520,6 @@ class _EditStaffDialogState extends State<_EditStaffDialog> {
         widget.onUpdated();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Staff updated successfully')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _resetPassword() async {
-    setState(() => isLoading = true);
-
-    try {
-      final response = await ApiClient.post(
-        '${AppConfig.apiUrl}/api/users/${widget.staff['staff_id']}/reset-password',
-        body: {},
-      );
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final newPassword = data['new_password'] as String;
-
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Password Reset'),
-            content: Text(
-              'New password: $newPassword\nCopy this password now.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
         );
       }
     } catch (e) {
@@ -643,7 +600,7 @@ class _EditStaffDialogState extends State<_EditStaffDialog> {
                 },
                 contentPadding: EdgeInsets.zero,
               );
-            }).toList(),
+            }),
             const SizedBox(height: 16),
             TextField(
               controller: passwordController,

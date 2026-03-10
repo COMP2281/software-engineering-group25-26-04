@@ -31,10 +31,12 @@ class _AdminClassManagementPageState extends State<AdminClassManagementPage> {
         '${AppConfig.apiUrl}/api/classes/',
         context: context,
       );
+      if (!mounted) return;
       final staffResponse = await ApiClient.get(
         '${AppConfig.apiUrl}/api/staff/',
         context: context,
       );
+      if (!mounted) return;
       final sitesResponse = await ApiClient.get(
         '${AppConfig.apiUrl}/api/sites/',
         context: context,
@@ -203,7 +205,7 @@ class _AdminClassManagementPageState extends State<AdminClassManagementPage> {
 }
 
 class _ClassFormDialog extends StatefulWidget {
-  final dynamic? classData;
+  final dynamic classData;
   final List<dynamic> staff;
   final List<dynamic> sites;
   final Map<int, String> siteNameMap;
@@ -349,6 +351,7 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
       if (response.statusCode == 201) {
         // Reload students
         await _loadEnrolledStudents();
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Student enrolled')));

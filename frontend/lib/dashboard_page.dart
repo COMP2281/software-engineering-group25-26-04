@@ -52,7 +52,10 @@ class _DashboardPageState extends State<DashboardPage> {
     _classesData = _fetchClasses(_selectedSite);
     _incidentsData = _fetchIncidents();
     _offsiteStudentsFuture = _fetchOffsiteStudents(_selectedOffsiteSite);
-    _pollingTimer = Timer.periodic(const Duration(seconds: 600), (_) => _refreshData());
+    _pollingTimer = Timer.periodic(
+      const Duration(seconds: 600),
+      (_) => _refreshData(),
+    );
   }
 
   @override
@@ -212,7 +215,7 @@ class _DashboardPageState extends State<DashboardPage> {
     BuildContext? navigationContext,
   }) async {
     final isDemoClass = cls['is_demo'] == true;
-    final targetContext = navigationContext ?? context;
+    final targetNavigator = Navigator.of(navigationContext ?? context);
 
     List<Map<String, dynamic>> students;
     if (isDemoClass) {
@@ -224,10 +227,9 @@ class _DashboardPageState extends State<DashboardPage> {
       students = classId is int ? await _fetchStudentsForClass(classId) : [];
     }
 
-    if (!mounted) return;
+    if (!targetNavigator.mounted) return;
 
-    Navigator.push(
-      targetContext,
+    targetNavigator.push(
       MaterialPageRoute(
         builder: (context) => ClassRegisterPage(
           className: cls['name'].toString(),
@@ -297,92 +299,109 @@ class _DashboardPageState extends State<DashboardPage> {
       return [_buildDemoClass()];
     }
   }
-  Future<List<Map<String, dynamic>>> _fetchOffsiteStudents(String? siteFilter) async {
-   try {
-    final attendanceResponse = await ApiClient.get('${AppConfig.apiUrl}/api/attendance/');
-    final studentsResponse = await ApiClient.get('${AppConfig.apiUrl}/api/students/');
-    final registersResponse = await ApiClient.get('${AppConfig.apiUrl}/api/registers/');
 
-    if (attendanceResponse.statusCode != 200 ||
-        studentsResponse.statusCode != 200 ||
-        registersResponse.statusCode != 200) {
-      throw Exception('Failed to load offsite analytics data');
+  Future<List<Map<String, dynamic>>> _fetchOffsiteStudents(
+    String? siteFilter,
+  ) async {
+    try {
+      final attendanceResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/attendance/',
+      );
+      final studentsResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/students/',
+      );
+      final registersResponse = await ApiClient.get(
+        '${AppConfig.apiUrl}/api/registers/',
+      );
+
+      if (attendanceResponse.statusCode != 200 ||
+          studentsResponse.statusCode != 200 ||
+          registersResponse.statusCode != 200) {
+        throw Exception('Failed to load offsite analytics data');
+      }
+
+      final attendanceData =
+          jsonDecode(attendanceResponse.body) as List<dynamic>;
+      final studentsData = jsonDecode(studentsResponse.body) as List<dynamic>;
+      final registersData = jsonDecode(registersResponse.body) as List<dynamic>;
+
+      final Map<int, Map<String, dynamic>> studentsById = {
+        for (final student in studentsData)
+          if (student['student_id'] is int)
+            student['student_id'] as int: {
+              'name':
+                  '${(student['first_name'] ?? '').toString()} ${(student['last_name'] ?? '').toString()}'
+                      .trim(),
+              'site': _siteNameFromId(student['site_combination_id']),
+            },
+      };
+
+      final Map<int, String> registerDateById = {
+        for (final register in registersData)
+          if (register['register_id'] is int)
+            register['register_id'] as int: (register['register_date'] ?? '')
+                .toString(),
+      };
+
+      List<Map<String, dynamic>> offsiteStudents = attendanceData
+          .where((item) => item['on_site'] == false)
+          .map((item) {
+            final studentId = item['student_id'];
+            final registerId = item['register_id'];
+            if (studentId is! int || registerId is! int) return null;
+
+            final studentInfo = studentsById[studentId];
+            final studentName =
+                (studentInfo?['name']?.toString().trim().isNotEmpty ?? false)
+                ? studentInfo!['name'].toString()
+                : 'Student $studentId';
+            final site = studentInfo?['site']?.toString() ?? 'Unknown';
+            final amPresent = item['am_present'] == true;
+            final pmPresent = item['pm_present'] == true;
+            final note = (item['note'] ?? '').toString().trim();
+
+            return {
+              'name': studentName,
+              'reason': note.isEmpty ? 'No note provided' : note,
+              'time': _timeLabel(amPresent, pmPresent),
+              'site': site,
+              'date': registerDateById[registerId] ?? 'Unknown date',
+            };
+          })
+          .whereType<Map<String, dynamic>>()
+          .toList();
+
+      offsiteStudents.sort(
+        (a, b) => b['date'].toString().compareTo(a['date'].toString()),
+      );
+
+      return offsiteStudents;
+    } catch (e) {
+      log('Error fetching offsite students: $e');
+      return [];
     }
-
-    final attendanceData = jsonDecode(attendanceResponse.body) as List<dynamic>;
-    final studentsData = jsonDecode(studentsResponse.body) as List<dynamic>;
-    final registersData = jsonDecode(registersResponse.body) as List<dynamic>;
-
-    final Map<int, Map<String, dynamic>> studentsById = {
-      for (final student in studentsData)
-        if (student['student_id'] is int)
-          student['student_id'] as int: {
-            'name': '${(student['first_name'] ?? '').toString()} ${(student['last_name'] ?? '').toString()}'.trim(),
-            'site': _siteNameFromId(student['site_combination_id']),
-          },
-    };
-
-    final Map<int, String> registerDateById = {
-      for (final register in registersData)
-        if (register['register_id'] is int)
-          register['register_id'] as int: (register['register_date'] ?? '').toString(),
-    };
-
-    List<Map<String, dynamic>> offsiteStudents = attendanceData
-        .where((item) => item['on_site'] == false)
-        .map((item) {
-          final studentId = item['student_id'];
-          final registerId = item['register_id'];
-          if (studentId is! int || registerId is! int) return null;
-
-          final studentInfo = studentsById[studentId];
-          final studentName = (studentInfo?['name']?.toString().trim().isNotEmpty ?? false)
-              ? studentInfo!['name'].toString()
-              : 'Student $studentId';
-          final site = studentInfo?['site']?.toString() ?? 'Unknown';
-          final amPresent = item['am_present'] == true;
-          final pmPresent = item['pm_present'] == true;
-          final note = (item['note'] ?? '').toString().trim();
-
-          return {
-            'name': studentName,
-            'reason': note.isEmpty ? 'No note provided' : note,
-            'time': _timeLabel(amPresent, pmPresent),
-            'site': site,
-            'date': registerDateById[registerId] ?? 'Unknown date',
-          };
-        })
-        .whereType<Map<String, dynamic>>()
-        .toList();
-
-    offsiteStudents.sort((a, b) => b['date'].toString().compareTo(a['date'].toString()));
-
-    return offsiteStudents;
-  } catch (e) {
-    log('Error fetching offsite students: $e');
-    return [];
   }
-}
 
-String _siteNameFromId(dynamic siteCombinationId) {
-  switch (siteCombinationId) {
-    case 1:
-      return 'Elemore Hall';
-    case 2:
-      return 'Windlestone';
-    case 3:
-      return 'PACC';
-    default:
-      return 'Unknown';
+  String _siteNameFromId(dynamic siteCombinationId) {
+    switch (siteCombinationId) {
+      case 1:
+        return 'Elemore Hall';
+      case 2:
+        return 'Windlestone';
+      case 3:
+        return 'PACC';
+      default:
+        return 'Unknown';
+    }
   }
-}
 
-String _timeLabel(bool amPresent, bool pmPresent) {
-  if (amPresent && pmPresent) return 'Morning & Afternoon';
-  if (amPresent) return 'Morning';
-  if (pmPresent) return 'Afternoon';
-  return 'Not marked';
-}
+  String _timeLabel(bool amPresent, bool pmPresent) {
+    if (amPresent && pmPresent) return 'Morning & Afternoon';
+    if (amPresent) return 'Morning';
+    if (pmPresent) return 'Afternoon';
+    return 'Not marked';
+  }
+
   Future<List<Map<String, dynamic>>> _fetchIncidents([
     String? siteFilter,
   ]) async {
@@ -410,7 +429,10 @@ String _timeLabel(bool amPresent, bool pmPresent) {
 
           return {
             'incident_id': item['incident_id'],
-            'title': (item['note'] != null && item['note'].toString().isNotEmpty) ? item['note'] : (item['other_activity'] ?? 'Incident'),
+            'title':
+                (item['note'] != null && item['note'].toString().isNotEmpty)
+                ? item['note']
+                : (item['other_activity'] ?? 'Incident'),
             'date': formattedDate,
             'coordinator': 'Staff',
             'action_taken': item['action_taken'] ?? 'Pending',
@@ -614,7 +636,9 @@ String _timeLabel(bool amPresent, bool pmPresent) {
                                         ),
                                       ),
                                       Text(
-                                        _getSiteLabel(cls['site_combination_id']),
+                                        _getSiteLabel(
+                                          cls['site_combination_id'],
+                                        ),
                                         style: TextStyle(
                                           color: Colors.blueGrey[500],
                                           fontSize: 12,
@@ -779,7 +803,8 @@ String _timeLabel(bool amPresent, bool pmPresent) {
                                     final statusColor =
                                         incident['status'] == 'Complete'
                                         ? Colors.green
-                                        : incident['status'] == 'Requires Review'
+                                        : incident['status'] ==
+                                              'Requires Review'
                                         ? Colors.orange
                                         : Colors.blueGrey;
                                     return _buildLogItem(
@@ -930,38 +955,56 @@ String _timeLabel(bool amPresent, bool pmPresent) {
                               ),
                             ],
                           ),
-const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-Expanded(
-  child: FutureBuilder<List<Map<String, dynamic>>>(
-    future: _offsiteStudentsFuture,
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
-      }
-       
-      final students = snapshot.data ?? [];
-      print('Snapshot connectionState: ${snapshot.connectionState}');
-      print('Snapshot hasData: ${snapshot.hasData}');
-      print('Snapshot data: ${snapshot.data}');
-      print('Snapshot hasError: ${snapshot.hasError}');
-      print('Snapshot error: ${snapshot.error}');
-      final elemore = students.where((s) => s['site'] == 'Elemore Hall').toList();
-      final windlestone = students.where((s) => s['site'] == 'Windlestone').toList();
-      final pacc = students.where((s) => s['site'] == 'PACC').toList();
-      final unknown = students.where((s) => s['site'] == 'Unknown').toList();
+                          Expanded(
+                            child: FutureBuilder<List<Map<String, dynamic>>>(
+                              future: _offsiteStudentsFuture,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
 
-      return Row(
-        children: [
-          _buildSiteColumn("Elemore", elemore),
-          _buildSiteColumn("Windlestone", windlestone),
-          _buildSiteColumn("PACC", pacc),
-          _buildSiteColumn("Unknown", unknown),
-        ],
-      );
-    },
-  ),
-),
+                                final students = snapshot.data ?? [];
+                                print(
+                                  'Snapshot connectionState: ${snapshot.connectionState}',
+                                );
+                                print('Snapshot hasData: ${snapshot.hasData}');
+                                print('Snapshot data: ${snapshot.data}');
+                                print(
+                                  'Snapshot hasError: ${snapshot.hasError}',
+                                );
+                                print('Snapshot error: ${snapshot.error}');
+                                final elemore = students
+                                    .where((s) => s['site'] == 'Elemore Hall')
+                                    .toList();
+                                final windlestone = students
+                                    .where((s) => s['site'] == 'Windlestone')
+                                    .toList();
+                                final pacc = students
+                                    .where((s) => s['site'] == 'PACC')
+                                    .toList();
+                                final unknown = students
+                                    .where((s) => s['site'] == 'Unknown')
+                                    .toList();
+
+                                return Row(
+                                  children: [
+                                    _buildSiteColumn("Elemore", elemore),
+                                    _buildSiteColumn(
+                                      "Windlestone",
+                                      windlestone,
+                                    ),
+                                    _buildSiteColumn("PACC", pacc),
+                                    _buildSiteColumn("Unknown", unknown),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1034,40 +1077,38 @@ Expanded(
       ),
     );
   }
+
   Widget _buildSiteColumn(String title, List<Map<String, dynamic>> students) {
-  return Expanded(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: students.isEmpty
-              ? const Text("None", style: TextStyle(fontSize: 12))
-              : ListView.builder(
-                  itemCount: students.length,
-                  itemBuilder: (context, index) {
-                    final s = students[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Text(
-                        s['name'],
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 8),
+          Expanded(
+            child: students.isEmpty
+                ? const Text("None", style: TextStyle(fontSize: 12))
+                : ListView.builder(
+                    itemCount: students.length,
+                    itemBuilder: (context, index) {
+                      final s = students[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          s['name'],
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _AllClassesFullscreenDialog extends StatefulWidget {
@@ -1082,14 +1123,16 @@ class _AllClassesFullscreenDialog extends StatefulWidget {
   final Future<void> Function(
     Map<String, dynamic> cls,
     BuildContext navigationContext,
-  ) onClassTap;
+  )
+  onClassTap;
 
   @override
   State<_AllClassesFullscreenDialog> createState() =>
       _AllClassesFullscreenDialogState();
 }
 
-class _AllClassesFullscreenDialogState extends State<_AllClassesFullscreenDialog> {
+class _AllClassesFullscreenDialogState
+    extends State<_AllClassesFullscreenDialog> {
   late Future<List<Map<String, dynamic>>> _allClassesFuture;
   late final TextEditingController _searchController;
   String _searchQuery = '';
@@ -1162,43 +1205,52 @@ class _AllClassesFullscreenDialogState extends State<_AllClassesFullscreenDialog
 
             final classes = snapshot.data ?? [];
             if (classes.isEmpty) {
-              return const Center(child: Text('No classes found in the database.'));
+              return const Center(
+                child: Text('No classes found in the database.'),
+              );
             }
 
             final query = _searchQuery.trim().toLowerCase();
 
-final filteredClasses = classes.where((cls) {
-  if (query.isEmpty) return true;
+            final filteredClasses = classes.where((cls) {
+              if (query.isEmpty) return true;
 
-  final className = (cls['class_name'] ?? '').toString().toLowerCase();
-  final classId = (cls['class_id'] ?? '').toString().toLowerCase();
-  final staffId = (cls['staff_id'] ?? '').toString().toLowerCase();
-  final siteId = cls['site_combination_id'];
-  final siteLabel =
-      widget.getSiteLabel(siteId is int ? siteId : null).toLowerCase();
+              final className = (cls['class_name'] ?? '')
+                  .toString()
+                  .toLowerCase();
+              final classId = (cls['class_id'] ?? '').toString().toLowerCase();
+              final staffId = (cls['staff_id'] ?? '').toString().toLowerCase();
+              final siteId = cls['site_combination_id'];
+              final siteLabel = widget
+                  .getSiteLabel(siteId is int ? siteId : null)
+                  .toLowerCase();
 
-  // Support: "class id 12", "classid 12", "class 12"
-  final classMatch = RegExp(r'^class\s*id?\s*:?\s*(.+)$').firstMatch(query);
-  if (classMatch != null) {
-    final classIdQuery = classMatch.group(1)?.trim() ?? '';
-    if (classIdQuery.isEmpty) return true;
-    return classId.contains(classIdQuery);
-  }
+              // Support: "class id 12", "classid 12", "class 12"
+              final classMatch = RegExp(
+                r'^class\s*id?\s*:?\s*(.+)$',
+              ).firstMatch(query);
+              if (classMatch != null) {
+                final classIdQuery = classMatch.group(1)?.trim() ?? '';
+                if (classIdQuery.isEmpty) return true;
+                return classId.contains(classIdQuery);
+              }
 
-  // Support: "staff id 4", "staffid 4", "staff 4"
-  final staffMatch = RegExp(r'^staff\s*id?\s*:?\s*(.+)$').firstMatch(query);
-  if (staffMatch != null) {
-    final staffIdQuery = staffMatch.group(1)?.trim() ?? '';
-    if (staffIdQuery.isEmpty) return true;
-    return staffId.contains(staffIdQuery);
-  }
+              // Support: "staff id 4", "staffid 4", "staff 4"
+              final staffMatch = RegExp(
+                r'^staff\s*id?\s*:?\s*(.+)$',
+              ).firstMatch(query);
+              if (staffMatch != null) {
+                final staffIdQuery = staffMatch.group(1)?.trim() ?? '';
+                if (staffIdQuery.isEmpty) return true;
+                return staffId.contains(staffIdQuery);
+              }
 
-  // General search
-  return className.contains(query) ||
-      classId.contains(query) ||
-      staffId.contains(query) ||
-      siteLabel.contains(query);
-}).toList();
+              // General search
+              return className.contains(query) ||
+                  classId.contains(query) ||
+                  staffId.contains(query) ||
+                  siteLabel.contains(query);
+            }).toList();
 
             return Column(
               children: [
@@ -1246,7 +1298,8 @@ final filteredClasses = classes.where((cls) {
                         )
                       : ListView.separated(
                           itemCount: filteredClasses.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final cls = filteredClasses[index];
                             final classId = cls['class_id'];

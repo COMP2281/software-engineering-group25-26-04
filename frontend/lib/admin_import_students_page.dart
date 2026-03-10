@@ -111,6 +111,7 @@ class _AdminImportStudentsPageState extends State<AdminImportStudentsPage> {
     );
 
     if (confirm != true) return;
+    if (!mounted) return;
 
     setState(() => _isLoading = true);
 

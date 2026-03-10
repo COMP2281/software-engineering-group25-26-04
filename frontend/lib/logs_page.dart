@@ -25,7 +25,10 @@ class _LogsPageState extends State<LogsPage> {
     super.initState();
     _logsFuture = _fetchLogs();
     _searchController = TextEditingController();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refresh());
+    _pollingTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refresh(),
+    );
   }
 
   @override
@@ -60,7 +63,8 @@ class _LogsPageState extends State<LogsPage> {
     return {
       for (final item in staffData)
         if (item['staff_id'] is int)
-          item['staff_id'] as int: '${item['first_name'] ?? ''} ${item['last_name'] ?? ''}'.trim(),
+          item['staff_id'] as int:
+              '${item['first_name'] ?? ''} ${item['last_name'] ?? ''}'.trim(),
     };
   }
 
@@ -74,7 +78,8 @@ class _LogsPageState extends State<LogsPage> {
     return {
       for (final item in studentData)
         if (item['student_id'] is int)
-          item['student_id'] as int: '${item['first_name'] ?? ''} ${item['last_name'] ?? ''}'.trim(),
+          item['student_id'] as int:
+              '${item['first_name'] ?? ''} ${item['last_name'] ?? ''}'.trim(),
     };
   }
 
@@ -84,8 +89,12 @@ class _LogsPageState extends State<LogsPage> {
     Map<int, String> studentNamesById,
   ) async {
     final responses = await Future.wait([
-      ApiClient.get('${AppConfig.apiUrl}/api/staff-incidents/incident/$incidentId'),
-      ApiClient.get('${AppConfig.apiUrl}/api/student-incidents/incident/$incidentId'),
+      ApiClient.get(
+        '${AppConfig.apiUrl}/api/staff-incidents/incident/$incidentId',
+      ),
+      ApiClient.get(
+        '${AppConfig.apiUrl}/api/student-incidents/incident/$incidentId',
+      ),
     ]);
 
     final staffResponse = responses[0];
@@ -107,7 +116,8 @@ class _LogsPageState extends State<LogsPage> {
 
     final pupilsInvolved = <String>[];
     if (studentResponse.statusCode == 200) {
-      final studentIncidentData = jsonDecode(studentResponse.body) as List<dynamic>;
+      final studentIncidentData =
+          jsonDecode(studentResponse.body) as List<dynamic>;
       for (final item in studentIncidentData) {
         final studentId = item['student_id'];
         if (studentId is int) {
@@ -119,10 +129,7 @@ class _LogsPageState extends State<LogsPage> {
       }
     }
 
-    return {
-      'staff_involved': staffInvolved,
-      'pupils_involved': pupilsInvolved,
-    };
+    return {'staff_involved': staffInvolved, 'pupils_involved': pupilsInvolved};
   }
 
   Future<List<Map<String, dynamic>>> _fetchLogs() async {
@@ -176,7 +183,9 @@ class _LogsPageState extends State<LogsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Log'),
-        content: const Text('Are you sure you want to delete this log entry? This action cannot be undone.'),
+        content: const Text(
+          'Are you sure you want to delete this log entry? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -195,6 +204,7 @@ class _LogsPageState extends State<LogsPage> {
     );
 
     if (confirmed != true) return;
+    if (!mounted) return;
 
     try {
       final response = await ApiClient.delete(
@@ -219,9 +229,9 @@ class _LogsPageState extends State<LogsPage> {
     } catch (e) {
       log('Error deleting log: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -301,7 +311,8 @@ class _LogsPageState extends State<LogsPage> {
                     });
                   },
                   decoration: InputDecoration(
-                    hintText: 'Search brief description, pupils involved, or staff involved',
+                    hintText:
+                        'Search brief description, pupils involved, or staff involved',
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchQuery.isEmpty
                         ? null
@@ -339,16 +350,24 @@ class _LogsPageState extends State<LogsPage> {
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         itemCount: filteredLogs.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 10),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final logItem = filteredLogs[index];
-                          final noteForTitle = (logItem['note'] ?? '').toString();
-                          final otherActivity = (logItem['other_activity'] ?? '').toString();
-                          final title = noteForTitle.isNotEmpty ? noteForTitle : (otherActivity.isNotEmpty ? otherActivity : 'Incident');
-                          final dateText = (logItem['incident_date'] ?? '').toString();
+                          final noteForTitle = (logItem['note'] ?? '')
+                              .toString();
+                          final otherActivity =
+                              (logItem['other_activity'] ?? '').toString();
+                          final title = noteForTitle.isNotEmpty
+                              ? noteForTitle
+                              : (otherActivity.isNotEmpty
+                                    ? otherActivity
+                                    : 'Incident');
+                          final dateText = (logItem['incident_date'] ?? '')
+                              .toString();
                           final outcome = (logItem['outcome'] ?? '').toString();
-                          final status = (logItem['status'] ?? 'Pending').toString();
-                          final note = (logItem['note'] ?? '').toString();
+                          final status = (logItem['status'] ?? 'Pending')
+                              .toString();
                           final incidentId = logItem['incident_id'] as int;
                           final pupilsInvolved = _normalizeNamesList(
                             logItem['pupils_involved'],
@@ -368,7 +387,9 @@ class _LogsPageState extends State<LogsPage> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: Colors.blueGrey.shade100),
+                              border: Border.all(
+                                color: Colors.blueGrey.shade100,
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.04),
@@ -398,7 +419,9 @@ class _LogsPageState extends State<LogsPage> {
                                         vertical: 5,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: statusColor.withValues(alpha: 0.12),
+                                        color: statusColor.withValues(
+                                          alpha: 0.12,
+                                        ),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
@@ -456,28 +479,54 @@ class _LogsPageState extends State<LogsPage> {
                                   children: [
                                     OutlinedButton.icon(
                                       onPressed: () => _editLog(logItem),
-                                      icon: const Icon(Icons.edit_outlined, size: 22),
-                                      label: const Text('Edit', style: TextStyle(fontSize: 15)),
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 22,
+                                      ),
+                                      label: const Text(
+                                        'Edit',
+                                        style: TextStyle(fontSize: 15),
+                                      ),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.blue[700],
-                                        side: BorderSide(color: Colors.blue.shade200),
-                                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                                        side: BorderSide(
+                                          color: Colors.blue.shade200,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 28,
+                                          vertical: 16,
+                                        ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                     OutlinedButton.icon(
                                       onPressed: () => _deleteLog(incidentId),
-                                      icon: const Icon(Icons.delete_outline, size: 22),
-                                      label: const Text('Delete', style: TextStyle(fontSize: 15)),
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        size: 22,
+                                      ),
+                                      label: const Text(
+                                        'Delete',
+                                        style: TextStyle(fontSize: 15),
+                                      ),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.red[600],
-                                        side: BorderSide(color: Colors.red.shade200),
-                                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                                        side: BorderSide(
+                                          color: Colors.red.shade200,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 28,
+                                          vertical: 16,
+                                        ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
                                       ),
                                     ),

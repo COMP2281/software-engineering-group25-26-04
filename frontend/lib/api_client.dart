@@ -15,13 +15,11 @@ import 'login_page.dart';
 class ApiClient {
   ApiClient._();
 
-  static Future<http.Response> get(
-    String url, {
-    BuildContext? context,
-  }) async {
+  static Future<http.Response> get(String url, {BuildContext? context}) async {
+    final navigator = context != null ? Navigator.of(context) : null;
     final headers = await AuthService.getHeaders();
     final response = await http.get(Uri.parse(url), headers: headers);
-    _handleUnauthorized(response, context);
+    _handleUnauthorized(response, navigator);
     return response;
   }
 
@@ -30,13 +28,14 @@ class ApiClient {
     required Map<String, dynamic> body,
     BuildContext? context,
   }) async {
+    final navigator = context != null ? Navigator.of(context) : null;
     final headers = await AuthService.getHeaders();
     final response = await http.post(
       Uri.parse(url),
       headers: headers,
       body: jsonEncode(body),
     );
-    _handleUnauthorized(response, context);
+    _handleUnauthorized(response, navigator);
     return response;
   }
 
@@ -45,13 +44,14 @@ class ApiClient {
     required Map<String, dynamic> body,
     BuildContext? context,
   }) async {
+    final navigator = context != null ? Navigator.of(context) : null;
     final headers = await AuthService.getHeaders();
     final response = await http.put(
       Uri.parse(url),
       headers: headers,
       body: jsonEncode(body),
     );
-    _handleUnauthorized(response, context);
+    _handleUnauthorized(response, navigator);
     return response;
   }
 
@@ -59,20 +59,21 @@ class ApiClient {
     String url, {
     BuildContext? context,
   }) async {
+    final navigator = context != null ? Navigator.of(context) : null;
     final headers = await AuthService.getHeaders();
     final response = await http.delete(Uri.parse(url), headers: headers);
-    _handleUnauthorized(response, context);
+    _handleUnauthorized(response, navigator);
     return response;
   }
 
   static void _handleUnauthorized(
     http.Response response,
-    BuildContext? context,
+    NavigatorState? navigator,
   ) {
-    if (response.statusCode == 401 && context != null && context.mounted) {
+    if (response.statusCode == 401 && navigator != null && navigator.mounted) {
       AuthService.logout().then((_) {
-        if (context.mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
+        if (navigator.mounted) {
+          navigator.pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const LoginPage()),
             (route) => false,
           );

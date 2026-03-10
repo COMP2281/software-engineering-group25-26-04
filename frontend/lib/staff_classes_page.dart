@@ -36,19 +36,6 @@ class _StaffClassesPageState extends State<StaffClassesPage> {
     super.dispose();
   }
 
-  int? _getSiteId(String? siteName) {
-    switch (siteName) {
-      case 'elemore_hall':
-        return 1;
-      case 'windlestone':
-        return 2;
-      case 'pacc':
-        return 3;
-      default:
-        return null;
-    }
-  }
-
   String _getSiteLabel(int? siteId) {
     switch (siteId) {
       case 1:
@@ -140,8 +127,9 @@ class _StaffClassesPageState extends State<StaffClassesPage> {
 
   Future<void> _openClassRegister(Map<String, dynamic> cls) async {
     final classId = cls['class_id'];
-    final List<Map<String, dynamic>> students = 
-        classId is int ? await _fetchStudentsForClass(classId) : <Map<String, dynamic>>[];
+    final List<Map<String, dynamic>> students = classId is int
+        ? await _fetchStudentsForClass(classId)
+        : <Map<String, dynamic>>[];
 
     if (!mounted) return;
 
@@ -233,38 +221,49 @@ class _StaffClassesPageState extends State<StaffClassesPage> {
 
               final query = _searchQuery.trim().toLowerCase();
 
-final filteredClasses = classes.where((cls) {
-  if (query.isEmpty) return true;
+              final filteredClasses = classes.where((cls) {
+                if (query.isEmpty) return true;
 
-  final className = (cls['class_name'] ?? '').toString().toLowerCase();
-  final classId = (cls['class_id'] ?? '').toString().toLowerCase();
-  final staffId = (cls['staff_id'] ?? '').toString().toLowerCase();
-  final siteId = cls['site_combination_id'];
-  final siteLabel =
-      _getSiteLabel(siteId is int ? siteId : null).toLowerCase();
+                final className = (cls['class_name'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final classId = (cls['class_id'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final staffId = (cls['staff_id'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final siteId = cls['site_combination_id'];
+                final siteLabel = _getSiteLabel(
+                  siteId is int ? siteId : null,
+                ).toLowerCase();
 
-  // Support: "class id 12", "classid 12", "class 12"
-  final classMatch = RegExp(r'^class\s*id?\s*:?\s*(.+)$').firstMatch(query);
-  if (classMatch != null) {
-    final classIdQuery = classMatch.group(1)?.trim() ?? '';
-    if (classIdQuery.isEmpty) return true;
-    return classId.contains(classIdQuery);
-  }
+                // Support: "class id 12", "classid 12", "class 12"
+                final classMatch = RegExp(
+                  r'^class\s*id?\s*:?\s*(.+)$',
+                ).firstMatch(query);
+                if (classMatch != null) {
+                  final classIdQuery = classMatch.group(1)?.trim() ?? '';
+                  if (classIdQuery.isEmpty) return true;
+                  return classId.contains(classIdQuery);
+                }
 
-  // Support: "staff id 4", "staffid 4", "staff 4"
-  final staffMatch = RegExp(r'^staff\s*id?\s*:?\s*(.+)$').firstMatch(query);
-  if (staffMatch != null) {
-    final staffIdQuery = staffMatch.group(1)?.trim() ?? '';
-    if (staffIdQuery.isEmpty) return true;
-    return staffId.contains(staffIdQuery);
-  }
+                // Support: "staff id 4", "staffid 4", "staff 4"
+                final staffMatch = RegExp(
+                  r'^staff\s*id?\s*:?\s*(.+)$',
+                ).firstMatch(query);
+                if (staffMatch != null) {
+                  final staffIdQuery = staffMatch.group(1)?.trim() ?? '';
+                  if (staffIdQuery.isEmpty) return true;
+                  return staffId.contains(staffIdQuery);
+                }
 
-  // General search
-  return className.contains(query) ||
-      classId.contains(query) ||
-      staffId.contains(query) ||
-      siteLabel.contains(query);
-}).toList();
+                // General search
+                return className.contains(query) ||
+                    classId.contains(query) ||
+                    staffId.contains(query) ||
+                    siteLabel.contains(query);
+              }).toList();
 
               return Column(
                 children: [
@@ -293,13 +292,11 @@ final filteredClasses = classes.where((cls) {
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: Colors.blueGrey.shade100),
+                        borderSide: BorderSide(color: Colors.blueGrey.shade100),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: Colors.blueGrey.shade100),
+                        borderSide: BorderSide(color: Colors.blueGrey.shade100),
                       ),
                     ),
                   ),
@@ -314,7 +311,7 @@ final filteredClasses = classes.where((cls) {
                           )
                         : ListView.separated(
                             itemCount: filteredClasses.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (context, index) =>
                                 const SizedBox(height: 10),
                             itemBuilder: (context, index) {
                               final cls = filteredClasses[index];

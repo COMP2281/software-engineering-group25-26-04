@@ -210,6 +210,7 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
       if (registerId == null) {
         throw Exception('Unable to create/find register for today');
       }
+      if (!mounted) return;
 
       final existingResponse = await ApiClient.get(
         '${AppConfig.apiUrl}/api/attendance/register/$registerId',
@@ -230,6 +231,7 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
       int failedUpdates = 0;
 
       for (final student in _students) {
+        if (!mounted) return;
         final note = student.noteController.text.trim();
         final payload = {
           'am_present': student.amPresent,
@@ -243,7 +245,6 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
             ? await ApiClient.put(
                 '${AppConfig.apiUrl}/api/attendance/$registerId/${student.studentId}',
                 body: payload,
-                context: context,
               )
             : await ApiClient.post(
                 '${AppConfig.apiUrl}/api/attendance/',
@@ -252,7 +253,6 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
                   'student_id': student.studentId,
                   ...payload,
                 },
-                context: context,
               );
 
         if (response.statusCode != 200 && response.statusCode != 201) {

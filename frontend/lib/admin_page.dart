@@ -35,6 +35,7 @@ class _AdminPageState extends State<AdminPage> {
         '${AppConfig.apiUrl}/api/staff/',
         context: context,
       );
+      if (!mounted) return;
       final classesResponse = await ApiClient.get(
         '${AppConfig.apiUrl}/api/classes/',
         context: context,
@@ -42,7 +43,8 @@ class _AdminPageState extends State<AdminPage> {
 
       if (!mounted) return;
 
-      if (staffResponse.statusCode == 200 && classesResponse.statusCode == 200) {
+      if (staffResponse.statusCode == 200 &&
+          classesResponse.statusCode == 200) {
         setState(() {
           staff = jsonDecode(staffResponse.body) as List;
           classes = jsonDecode(classesResponse.body) as List;
@@ -51,9 +53,9 @@ class _AdminPageState extends State<AdminPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading data: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
       setState(() => isLoading = false);
     }
   }
@@ -217,11 +219,14 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const AdminUserManagementPage(),
-                          ),
-                        ).then((_) => _loadData());
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const AdminUserManagementPage(),
+                              ),
+                            )
+                            .then((_) => _loadData());
                       },
                       child: Text(
                         'View All',
@@ -255,10 +260,8 @@ class _AdminPageState extends State<AdminPage> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: staff.length > 5 ? 5 : staff.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        color: Colors.grey[300],
-                      ),
+                      separatorBuilder: (_, _) =>
+                          Divider(height: 1, color: Colors.grey[300]),
                       itemBuilder: (context, index) {
                         final s = staff[index];
                         return Padding(
@@ -314,11 +317,14 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const AdminClassManagementPage(),
-                          ),
-                        ).then((_) => _loadData());
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const AdminClassManagementPage(),
+                              ),
+                            )
+                            .then((_) => _loadData());
                       },
                       child: Text(
                         'View All',
@@ -352,10 +358,8 @@ class _AdminPageState extends State<AdminPage> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: classes.length > 5 ? 5 : classes.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        color: Colors.grey[300],
-                      ),
+                      separatorBuilder: (_, _) =>
+                          Divider(height: 1, color: Colors.grey[300]),
                       itemBuilder: (context, index) {
                         final c = classes[index];
                         return Padding(
