@@ -51,7 +51,7 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _classesData = _fetchClasses(_selectedSite);
     _incidentsData = _fetchIncidents();
-    _offsiteStudentsFuture = _fetchOffsiteStudents();
+    _offsiteStudentsFuture = _fetchOffsiteStudents(_selectedOffsiteSite);
     _pollingTimer = Timer.periodic(const Duration(seconds: 600), (_) => _refreshData());
   }
 
@@ -65,6 +65,7 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() {
       _classesData = _fetchClasses(_selectedSite);
       _incidentsData = _fetchIncidents(_selectedSite);
+      _offsiteStudentsFuture = _fetchOffsiteStudents(_selectedOffsiteSite);
     });
   }
 
@@ -296,7 +297,7 @@ class _DashboardPageState extends State<DashboardPage> {
       return [_buildDemoClass()];
     }
   }
-  Future<List<Map<String, dynamic>>> _fetchOffsiteStudents() async {
+  Future<List<Map<String, dynamic>>> _fetchOffsiteStudents(String? siteFilter) async {
    try {
     final attendanceResponse = await ApiClient.get('${AppConfig.apiUrl}/api/attendance/');
     final studentsResponse = await ApiClient.get('${AppConfig.apiUrl}/api/students/');
