@@ -22,6 +22,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   late Future<List<Map<String, dynamic>>> _classesData;
   late Future<List<Map<String, dynamic>>> _incidentsData;
+  late Future<List<Map<String, dynamic>>> _offsiteStudentsFuture;
   String? _selectedSite;
   String? _selectedOffsiteSite;
   Timer? _pollingTimer;
@@ -50,6 +51,7 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _classesData = _fetchClasses(_selectedSite);
     _incidentsData = _fetchIncidents();
+    _offsiteStudentsFuture = _fetchOffsiteStudents();
     _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshData());
   }
 
@@ -228,7 +230,92 @@ class _DashboardPageState extends State<DashboardPage> {
       return [_buildDemoClass()];
     }
   }
+  Future<List<Map<String, dynamic>>> _fetchOffsiteStudents() async {
+   try {
+    final attendanceResponse = await ApiClient.get('${AppConfig.apiUrl}/api/attendance/');
+    final studentsResponse = await ApiClient.get('${AppConfig.apiUrl}/api/students/');
+    final registersResponse = await ApiClient.get('${AppConfig.apiUrl}/api/registers/');
 
+    if (attendanceResponse.statusCode != 200 ||
+        studentsResponse.statusCode != 200 ||
+        registersResponse.statusCode != 200) {
+      throw Exception('Failed to load offsite analytics data');
+    }
+
+    final attendanceData = jsonDecode(attendanceResponse.body) as List<dynamic>;
+    final studentsData = jsonDecode(studentsResponse.body) as List<dynamic>;
+    final registersData = jsonDecode(registersResponse.body) as List<dynamic>;
+
+    final Map<int, Map<String, dynamic>> studentsById = {
+      for (final student in studentsData)
+        if (student['student_id'] is int)
+          student['student_id'] as int: {
+            'name': '${(student['first_name'] ?? '').toString()} ${(student['last_name'] ?? '').toString()}'.trim(),
+            'site': _siteNameFromId(student['site_combination_id']),
+          },
+    };
+
+    final Map<int, String> registerDateById = {
+      for (final register in registersData)
+        if (register['register_id'] is int)
+          register['register_id'] as int: (register['register_date'] ?? '').toString(),
+    };
+
+    List<Map<String, dynamic>> offsiteStudents = attendanceData
+        .where((item) => item['on_site'] == false)
+        .map((item) {
+          final studentId = item['student_id'];
+          final registerId = item['register_id'];
+          if (studentId is! int || registerId is! int) return null;
+
+          final studentInfo = studentsById[studentId];
+          final studentName = (studentInfo?['name']?.toString().trim().isNotEmpty ?? false)
+              ? studentInfo!['name'].toString()
+              : 'Student $studentId';
+          final site = studentInfo?['site']?.toString() ?? 'Unknown';
+          final amPresent = item['am_present'] == true;
+          final pmPresent = item['pm_present'] == true;
+          final note = (item['note'] ?? '').toString().trim();
+
+          return {
+            'name': studentName,
+            'reason': note.isEmpty ? 'No note provided' : note,
+            'time': _timeLabel(amPresent, pmPresent),
+            'site': site,
+            'date': registerDateById[registerId] ?? 'Unknown date',
+          };
+        })
+        .whereType<Map<String, dynamic>>()
+        .toList();
+
+    offsiteStudents.sort((a, b) => b['date'].toString().compareTo(a['date'].toString()));
+
+    return offsiteStudents;
+  } catch (e) {
+    log('Error fetching offsite students: $e');
+    return [];
+  }
+}
+
+String _siteNameFromId(dynamic siteCombinationId) {
+  switch (siteCombinationId) {
+    case 1:
+      return 'Elemore Hall';
+    case 2:
+      return 'Windlestone';
+    case 3:
+      return 'PACC';
+    default:
+      return 'Unknown';
+  }
+}
+
+String _timeLabel(bool amPresent, bool pmPresent) {
+  if (amPresent && pmPresent) return 'Morning & Afternoon';
+  if (amPresent) return 'Morning';
+  if (pmPresent) return 'Afternoon';
+  return 'Not marked';
+}
   Future<List<Map<String, dynamic>>> _fetchIncidents([
     String? siteFilter,
   ]) async {
@@ -815,6 +902,38 @@ class _DashboardPageState extends State<DashboardPage> {
                               ),
                             ],
                           ),
+const SizedBox(height: 16),
+
+Expanded(
+  child: FutureBuilder<List<Map<String, dynamic>>>(
+    future: _offsiteStudentsFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+       
+      final students = snapshot.data ?? [];
+      print('Snapshot connectionState: ${snapshot.connectionState}');
+      print('Snapshot hasData: ${snapshot.hasData}');
+      print('Snapshot data: ${snapshot.data}');
+      print('Snapshot hasError: ${snapshot.hasError}');
+      print('Snapshot error: ${snapshot.error}');
+      final elemore = students.where((s) => s['site'] == 'Elemore Hall').toList();
+      final windlestone = students.where((s) => s['site'] == 'Windlestone').toList();
+      final pacc = students.where((s) => s['site'] == 'PACC').toList();
+      final unknown = students.where((s) => s['site'] == 'Unknown').toList();
+
+      return Row(
+        children: [
+          _buildSiteColumn("Elemore", elemore),
+          _buildSiteColumn("Windlestone", windlestone),
+          _buildSiteColumn("PACC", pacc),
+          _buildSiteColumn("Unknown", unknown),
+        ],
+      );
+    },
+  ),
+),
                         ],
                       ),
                     ),
@@ -887,4 +1006,38 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
   }
+  Widget _buildSiteColumn(String title, List<Map<String, dynamic>> students) {
+  return Expanded(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: students.isEmpty
+              ? const Text("None", style: TextStyle(fontSize: 12))
+              : ListView.builder(
+                  itemCount: students.length,
+                  itemBuilder: (context, index) {
+                    final s = students[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        s['name'],
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    ),
+  );
+}
 }
