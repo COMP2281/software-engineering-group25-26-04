@@ -361,6 +361,11 @@ class _DashboardPageState extends State<DashboardPage> {
             final note = (item['note'] ?? '').toString().trim();
 
             return {
+              'student_id': studentId,
+              'register_id': registerId,
+              'am_present': amPresent,
+              'pm_present': pmPresent,
+              'note': note,
               'name': studentName,
               'reason': note.isEmpty ? 'No note provided' : note,
               'time': _timeLabel(amPresent, pmPresent),
@@ -1095,11 +1100,14 @@ class _DashboardPageState extends State<DashboardPage> {
                     itemCount: students.length,
                     itemBuilder: (context, index) {
                       final s = students[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Text(
-                          s['name'],
-                          style: const TextStyle(fontSize: 12),
+                      return InkWell(
+                        onTap: () => _showRemoveOffsiteDialog(context, s),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Text(
+                            s['name'],
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ),
                       );
                     },
@@ -1108,6 +1116,64 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _showRemoveOffsiteDialog(BuildContext context, Map<String, dynamic> student) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Student'),
+        content: Text('Are you sure you want to add ${student['name']} to the site?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      try {
+        final registerId = student['register_id'];
+        final studentId = student['student_id'];
+        
+        final payload = {
+          'am_present': student['am_present'],
+          'pm_present': student['pm_present'],
+          'on_site': true,
+          'note': student['note'],
+        };
+
+        final response = await ApiClient.put(
+          '${AppConfig.apiUrl}/api/attendance/$registerId/$studentId',
+          body: payload,
+          context: context,
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${student['name']} is now on-site')),
+            );
+          }
+          _refreshData();
+        } else {
+          throw Exception('Failed to update attendance');
+        }
+      } catch (e) {
+        log('Error updating offsite status: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: Could not update student status')),
+          );
+        }
+      }
+    }
   }
 }
 
