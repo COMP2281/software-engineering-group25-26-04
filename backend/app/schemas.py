@@ -273,19 +273,25 @@ class StudentIncidentCreate(BaseModel):
     student_id: int
     incident_id: int
     time: Optional[datetime] = None
+    return_time: Optional[datetime] = None
     returned: bool = False
+    duration_minutes: Optional[int] = None
 
 
 class StudentIncidentUpdate(BaseModel):
     time: Optional[datetime] = None
+    return_time: Optional[datetime] = None
     returned: Optional[bool] = None
+    duration_minutes: Optional[int] = None
 
 
 class StudentIncidentResponse(BaseModel):
     student_id: int
     incident_id: int
     time: Optional[datetime]
+    return_time: Optional[datetime]
     returned: bool
+    duration_minutes: Optional[int]
     model_config = ConfigDict(from_attributes=True)
 
 

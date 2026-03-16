@@ -329,6 +329,7 @@ class StudentIncident(Base):
         Integer, ForeignKey("incidents.incident_id"), primary_key=True
     )
     time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    return_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     returned: Mapped[bool] = mapped_column(Boolean, default=False)
     duration_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

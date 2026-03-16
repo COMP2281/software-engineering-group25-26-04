@@ -200,15 +200,40 @@ class _CreateLogModalState extends State<CreateLogModal> {
             for (final si in studentIncData) {
               final studentId = si['student_id'];
               final name = studentNames[studentId] ?? 'Student $studentId';
-              final time = (si['time'] ?? '').toString();
-              final returned = si['returned'] == true ? 'Yes' : 'No';
+              
+              // Handle time: extract HH:mm for the UI
+              final timeStr = (si['time'] ?? '').toString();
+              String displayTime = '';
+              if (timeStr.isNotEmpty && timeStr != 'null') {
+                 if (timeStr.contains('T')) {
+                   final timePart = timeStr.split('T').last;
+                   if (timePart.length >= 5) {
+                     displayTime = timePart.substring(0, 5);
+                   }
+                 } else {
+                   displayTime = timeStr;
+                 }
+              }
+
+              // Handle return_time: extract HH:mm for the UI
+              final returnTimeStr = (si['return_time'] ?? '').toString();
+              String displayReturnTime = '';
+              if (returnTimeStr.isNotEmpty && returnTimeStr != 'null') {
+                 if (returnTimeStr.contains('T')) {
+                   final timePart = returnTimeStr.split('T').last;
+                   if (timePart.length >= 5) {
+                     displayReturnTime = timePart.substring(0, 5);
+                   }
+                 } else {
+                   displayReturnTime = returnTimeStr;
+                 }
+              }
+
               final duration = (si['duration_minutes'] ?? '').toString();
               _students.add({
                 'name': name,
-                'time': time.isNotEmpty && time != 'null'
-                    ? time.split('T').last.substring(0, 5)
-                    : '',
-                'returned': returned,
+                'time': displayTime,
+                'return_time': displayReturnTime,
                 'duration': duration != 'null' ? duration : '',
               });
             }
@@ -604,7 +629,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
                 () => _students.add({
                   'name': '',
                   'time': '',
-                  'returned': '',
+                  'return_time': '',
                   'duration': '',
                 }),
               ),
@@ -703,28 +728,92 @@ class _CreateLogModalState extends State<CreateLogModal> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: TextField(
-                    controller: TextEditingController(
-                      text: student['time'] ?? '',
+                  child: InkWell(
+                    onTap: () async {
+                      TimeOfDay initialTime = TimeOfDay.now();
+                      final currentVal = student['time'] ?? '';
+                      if (currentVal.isNotEmpty) {
+                        final parts = currentVal.split(':');
+                        if (parts.length >= 2) {
+                          initialTime = TimeOfDay(
+                            hour: int.tryParse(parts[0]) ?? initialTime.hour,
+                            minute: int.tryParse(parts[1]) ?? initialTime.minute,
+                          );
+                        }
+                      }
+                      
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: initialTime,
+                      );
+                      
+                      if (picked != null && mounted) {
+                        setState(() {
+                          final hour = picked.hour.toString().padLeft(2, '0');
+                          final minute = picked.minute.toString().padLeft(2, '0');
+                          _students[i]['time'] = '$hour:$minute';
+                          _recalculateDuration(i);
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        hintText: "Time",
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+                      ),
+                      child: Text(
+                        student['time']?.isNotEmpty == true ? student['time']! : 'Time',
+                        style: TextStyle(
+                           color: student['time']?.isNotEmpty == true ? Colors.black87 : Colors.black54,
+                        ),
+                      ),
                     ),
-                    decoration: const InputDecoration(
-                      hintText: "Time",
-                      isDense: true,
-                    ),
-                    onChanged: (val) => _students[i]['time'] = val,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: TextField(
-                    controller: TextEditingController(
-                      text: student['returned'] ?? '',
+                  child: InkWell(
+                    onTap: () async {
+                      TimeOfDay initialTime = TimeOfDay.now();
+                      final currentVal = student['return_time'] ?? '';
+                      if (currentVal.isNotEmpty) {
+                        final parts = currentVal.split(':');
+                        if (parts.length >= 2) {
+                          initialTime = TimeOfDay(
+                            hour: int.tryParse(parts[0]) ?? initialTime.hour,
+                            minute: int.tryParse(parts[1]) ?? initialTime.minute,
+                          );
+                        }
+                      }
+                      
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: initialTime,
+                      );
+                      
+                      if (picked != null && mounted) {
+                        setState(() {
+                          final hour = picked.hour.toString().padLeft(2, '0');
+                          final minute = picked.minute.toString().padLeft(2, '0');
+                          _students[i]['return_time'] = '$hour:$minute';
+                          _recalculateDuration(i);
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        hintText: "Return",
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+                      ),
+                      child: Text(
+                        student['return_time']?.isNotEmpty == true ? student['return_time']! : 'Return',
+                        style: TextStyle(
+                           color: student['return_time']?.isNotEmpty == true ? Colors.black87 : Colors.black54,
+                        ),
+                      ),
                     ),
-                    decoration: const InputDecoration(
-                      hintText: "Ret.",
-                      isDense: true,
-                    ),
-                    onChanged: (val) => _students[i]['returned'] = val,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -733,6 +822,7 @@ class _CreateLogModalState extends State<CreateLogModal> {
                     controller: TextEditingController(
                       text: student['duration'] ?? '',
                     ),
+                    keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       hintText: "Dur.",
                       isDense: true,
@@ -818,6 +908,37 @@ class _CreateLogModalState extends State<CreateLogModal> {
   }
 
   bool _isLoading = false;
+
+  void _recalculateDuration(int index) {
+    final timeStr = _students[index]['time'] ?? '';
+    final returnTimeStr = _students[index]['return_time'] ?? '';
+    
+    if (timeStr.isEmpty || returnTimeStr.isEmpty) {
+       return;
+    }
+    
+    try {
+      final timeParts = timeStr.split(':');
+      final returnParts = returnTimeStr.split(':');
+      
+      if (timeParts.length >= 2 && returnParts.length >= 2) {
+         final timeMin = int.parse(timeParts[0]) * 60 + int.parse(timeParts[1]);
+         final returnMin = int.parse(returnParts[0]) * 60 + int.parse(returnParts[1]);
+         
+         int diff = returnMin - timeMin;
+         // Handle returning past midnight
+         if (diff < 0) {
+            diff += 24 * 60;
+         }
+         
+         setState(() {
+            _students[index]['duration'] = diff.toString();
+         });
+      }
+    } catch (_) {
+      // Ignore parsing errors, user can still manually edit
+    }
+  }
 
   Future<void> _submitLog() async {
     if (_coordinatorController.text.trim().isEmpty) {
@@ -1054,21 +1175,50 @@ class _CreateLogModalState extends State<CreateLogModal> {
       for (final student in _students) {
         final studentName = (student['name'] ?? '').toString();
         final studentId = studentNameToId[studentName];
-        // print('>>> Creating student link: name="$studentName" -> id=$studentId');
+        
         if (studentId != null) {
-          // final createResp = await ApiClient.post(
-          //   '${AppConfig.apiUrl}/api/student-incidents/',
-          //   body: {'student_id': studentId, 'incident_id': incidentId},
-          // );
-          // print('>>> Student link create response: ${createResp.statusCode} ${createResp.body}');
+          final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+          // Construct the full ISO-8601 datetime for the incident time if provided
+          String? timeIsoStr;
+          final timeVal = (student['time'] ?? '').toString();
+          if (timeVal.isNotEmpty) {
+             timeIsoStr = '${dateStr}T$timeVal:00';
+          }
+          
+          // Construct the full ISO-8601 datetime for the return time if provided
+          String? returnTimeIsoStr;
+          final returnTimeVal = (student['return_time'] ?? '').toString();
+          if (returnTimeVal.isNotEmpty) {
+             returnTimeIsoStr = '${dateStr}T$returnTimeVal:00';
+          }
+          
+          final durationVal = (student['duration'] ?? '').toString();
+          final durationInt = int.tryParse(durationVal);
+
+          final payload = {
+             'student_id': studentId,
+             'incident_id': incidentId,
+             'returned': returnTimeIsoStr != null, // Keep for legacy
+          };
+          
+          if (timeIsoStr != null) {
+             payload['time'] = timeIsoStr;
+          }
+          
+          if (returnTimeIsoStr != null) {
+             payload['return_time'] = returnTimeIsoStr;
+          }
+          
+          if (durationInt != null) {
+             payload['duration_minutes'] = durationInt as Object;
+          }
+
           await ApiClient.post(
             '${AppConfig.apiUrl}/api/student-incidents/',
-            body: {'student_id': studentId, 'incident_id': incidentId},
+            body: payload,
           );
         }
-        // else {
-        //   print('>>> SKIPPED: no matching student_id for name "$studentName"');
-        // }
       }
     } catch (e) {
       // print('>>> ERROR in _syncStaffAndStudents: $e');
