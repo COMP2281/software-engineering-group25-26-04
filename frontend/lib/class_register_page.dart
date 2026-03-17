@@ -373,8 +373,8 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
+                              horizontal: 12,
+                              vertical: 16, // ENLARGED: Increased vertical padding to make rows taller
                             ),
                             child: Row(
                               children: [
@@ -383,7 +383,7 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
                                     '${student.name} (${student.studentId})',
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      fontSize: 13,
+                                      fontSize: 16, // ENLARGED: Increased font size for student name
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -391,20 +391,25 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
                                 _CompactToggle(
                                   label: 'AM',
                                   value: student.amPresent,
+                                  activeColor: Colors.green,
                                   onChanged: (value) {
                                     setState(() => student.amPresent = value);
                                   },
                                 ),
+                                const SizedBox(width: 8),
                                 _CompactToggle(
                                   label: 'PM',
                                   value: student.pmPresent,
+                                  activeColor: Colors.blue,
                                   onChanged: (value) {
                                     setState(() => student.pmPresent = value);
                                   },
                                 ),
+                                const SizedBox(width: 8),
                                 _CompactToggle(
                                   label: 'Offsite',
                                   value: student.offsite,
+                                  activeColor: Colors.orange,
                                   onChanged: (value) {
                                     setState(() {
                                       student.offsite = value;
@@ -417,7 +422,8 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
                                 if (student.offsite) ...[
                                   const SizedBox(width: 8),
                                   SizedBox(
-                                    width: 220,
+                                    width: 250, // ENLARGED: Gave more width to the textfield
+                                    height: 40, // ENLARGED: Set a specific taller height for the text field
                                     child: TextFormField(
                                       controller: student.noteController,
                                       decoration: const InputDecoration(
@@ -425,8 +431,8 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
                                         border: OutlineInputBorder(),
                                         isDense: true,
                                         contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 8,
+                                          horizontal: 12, // ENLARGED
+                                          vertical: 12, // ENLARGED
                                         ),
                                       ),
                                       maxLines: 1,
@@ -540,33 +546,39 @@ class _CompactToggle extends StatelessWidget {
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final Color activeColor;
 
   const _CompactToggle({
     required this.label,
     required this.value,
     required this.onChanged,
+    this.activeColor = Colors.blue,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12)),
-        const SizedBox(width: 4),
-        SizedBox(
-          width: 28,
-          height: 28,
-          child: Transform.scale(
-            scale: 1.2,
-            child: Checkbox(
-              value: value,
-              onChanged: (newValue) => onChanged(newValue ?? false),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: value ? activeColor : Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: value ? activeColor : Colors.grey[300]!,
+            width: 1,
           ),
         ),
-      ],
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: value ? Colors.white : Colors.grey[700],
+          ),
+        ),
+      ),
     );
   }
 }
